@@ -1,14 +1,16 @@
 "use client";
 
 // 3D township map. Streets and drains are coloured with feature-state, so a status change
-// never reloads the data. Base map: OpenFreeMap (free, no key). No Google/Cesium tiles.
+// never reloads the data. Water slabs (flood-zones.geojson) rise with each drain's overflow.
+// Base map: OpenFreeMap (free, no key). No Google/Cesium tiles.
 
 import { useEffect, useRef, useState } from "react";
-import type { Map as MapLibreMap } from "maplibre-gl";
+import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Area, Streets } from "@/lib/area";
 import type { Drain, DrainStatus } from "@/lib/engine/types";
 import { STATUS_COLOR, WATER_COLOR } from "@/lib/colors";
+import { slabHeights } from "@/lib/water";
 
 const BASE_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
@@ -62,6 +64,12 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
           attribution: area.attribution,
         });
         m.addSource("buildings", { type: "geojson", data: `/data/${area.slug}/buildings.geojson` });
+        // One feature per drain zone and band ("D07-road", "D07-yard"); height arrives via updateData.
+        m.addSource("flood-zones", {
+          type: "geojson",
+          data: `/data/${area.slug}/flood-zones.geojson`,
+          promoteId: "id",
+        });
         m.addSource("drains", {
           type: "geojson",
           promoteId: "id",
@@ -75,19 +83,6 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
           },
         });
 
-        // Water spreading along flooded streets — width follows street_depth_cm.
-        m.addLayer({
-          id: "street-water",
-          type: "line",
-          source: "streets",
-          layout: { "line-cap": "round", "line-join": "round" },
-          paint: {
-            "line-color": WATER_COLOR,
-            "line-opacity": 0.5,
-            "line-blur": 3,
-            "line-width": ["interpolate", ["linear"], ["coalesce", ["feature-state", "depth"], 0], 0, 0, 5, 10, 40, 28],
-          },
-        });
         m.addLayer({
           id: "streets",
           type: "line",
@@ -106,6 +101,19 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
             "fill-extrusion-color": "#d6d3d1",
             "fill-extrusion-height": ["get", "height"],
             "fill-extrusion-opacity": 0.85,
+          },
+        });
+        // A zero-height extrusion still paints its top face on the ground, so dry zones are filtered out.
+        // (Not "water" — the base style already uses that id for rivers and lakes.)
+        m.addLayer({
+          id: "flood-water",
+          type: "fill-extrusion",
+          source: "flood-zones",
+          filter: [">", ["coalesce", ["get", "h"], 0], 0],
+          paint: {
+            "fill-extrusion-color": WATER_COLOR,
+            "fill-extrusion-height": ["coalesce", ["get", "h"], 0],
+            "fill-extrusion-opacity": 0.55,
           },
         });
         m.addLayer({
@@ -150,10 +158,19 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
       const s = statuses[f.properties.drain_id];
       if (s) m.setFeatureState({ source: "streets", id: f.properties.id }, { status: s.status, depth: s.street_depth_cm });
     }
+    const update = [];
     for (const d of drains) {
       const s = statuses[d.id];
-      if (s) m.setFeatureState({ source: "drains", id: d.id }, { status: s.status });
+      if (!s) continue;
+      m.setFeatureState({ source: "drains", id: d.id }, { status: s.status });
+      const h = slabHeights(s.street_depth_cm);
+      update.push(
+        { id: `${d.id}-road`, addOrUpdateProperties: [{ key: "h", value: h.road }] },
+        { id: `${d.id}-yard`, addOrUpdateProperties: [{ key: "h", value: h.yard }] },
+      );
     }
+    // Properties (not feature-state) because the layer filter has to see them.
+    m.getSource<GeoJSONSource>("flood-zones")?.updateData({ update });
   }, [ready, statuses, streets, drains]);
 
   return <div ref={container} className="h-full w-full" />;

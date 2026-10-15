@@ -10,7 +10,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test tests/",
-    "data": "node scripts/fetch-data.mjs && node scripts/make-seed.mjs",
+    "data": "node scripts/fetch-data.mjs && node scripts/make-flood-zones.mjs && node scripts/make-seed.mjs",
     "seed": "node scripts/make-seed.mjs"
   },
   "dependencies": {

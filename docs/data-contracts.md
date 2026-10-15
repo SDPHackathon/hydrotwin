@@ -19,6 +19,7 @@ The names here are the names in code, in the database and in the engine. Change 
 | `area.json` | `slug`, `name`, `bbox` [S, W, N, E], `center` [lng, lat], `attribution` |
 | `streets.geojson` | LineStrings · properties `id`, `name`, `highway`, `drain_id` |
 | `buildings.geojson` | Polygons · properties `id`, `height` (m; 7 m default when OSM has none) |
+| `flood-zones.geojson` | water-slab footprints: one MultiPolygon per drain + band · properties `id` (`D07-road`), `drain_id`, `band` (`road` 6 m / `yard` 18 m either side of the street) · built by `scripts/make-flood-zones.mjs` |
 | `drains.json` | `id`, `name`, `lng`, `lat`, `elevation_m`, `bank_cm`, `catchment_factor`, `outflow_cm_per_min`, `streets` (count) |
 
 ## Tables — `supabase/migrations/20261015000000_init.sql`

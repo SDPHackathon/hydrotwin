@@ -56,7 +56,7 @@ Building houses / roads / zoning, traffic simulation, real hydraulics, hardware,
 
 - **Drains are simulated zones**: real OSM streets grouped into 10 zones; each zone's ground height is real (Open-Meteo, ~90 m DEM), so low zones fill faster.
 - **The storm is a synthetic 3-hour design storm** (peak ≈108 mm/h) until we pick a recorded Klang storm.
-- **Water = drain overflow shown as depth along that zone's streets** — not a flow model.
+- **Water = drain overflow shown as depth along that zone's streets** — not a flow model. Slab height is drawn ×6 so ~20 cm is visible next to houses (`lib/water.ts`); the UI says so.
 - **No hardware**: a sensor is anything that can call the risk engine; a phone plays the sensor on stage. SDP would buy off-the-shelf level sensors; we are the software.
 
 ## Open decisions (team)

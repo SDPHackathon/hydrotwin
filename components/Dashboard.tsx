@@ -7,6 +7,7 @@ import { STATUS_COLOR } from "@/lib/colors";
 import type { Drain, DrainStatus, Status } from "@/lib/engine/types";
 import { STORM_MINUTES } from "@/lib/engine/storm";
 import { useLocalStorm } from "@/lib/useLocalStorm";
+import { WATER_HEIGHT_SCALE } from "@/lib/water";
 
 const SEVERITY: Record<Status, number> = { red: 0, amber: 1, green: 2 };
 const SPEEDS = [1, 2, 4];
@@ -119,8 +120,8 @@ export default function Dashboard({ area, drains, streets }: { area: Area; drain
         </section>
 
         <footer className="mt-auto text-xs leading-relaxed text-stone-400">
-          Drains and the storm are simulated; drain elevations are real (Open-Meteo). Streets and buildings ©
-          OpenStreetMap contributors.
+          Drains and the storm are simulated; drain elevations are real (Open-Meteo). Water height is drawn
+          ×{WATER_HEIGHT_SCALE} so it can be seen. Streets and buildings © OpenStreetMap contributors.
         </footer>
       </aside>
     </div>
