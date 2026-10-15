@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HydroTwin
 
-## Getting Started
+> **Warn residents today. Plan a township that floods less tomorrow.**
 
-First, run the development server:
+SDP University Hackathon 2026 — *Township of Tomorrow* · Track: **Planet — climate resilience**
+
+HydroTwin is a digital twin of a township's drains. During a storm it turns drain-level readings into a street-by-street flood warning with time-to-flood, alerts the residents who need to act, and gives guards a check-list of vulnerable residents. Between storms, planners test fixes — a bigger drain, a retention pond, a green area — against the same storm and see the difference before they build.
+
+**Demo video:** *(link — before 23 Oct)*
+
+## Run it locally
+
+Needs Node.js 22.18 or newer.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev          # → http://localhost:3000 — press "Start storm"
+npm test             # engine tests
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The township data is already in `public/data/bukit-raja/`; `npm run data` rebuilds it from OpenStreetMap.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## How it works
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+drain sensors (simulated) → risk engine → street status → map · resident alerts · guard check-list
+```
 
-## Learn More
+- **Risk engine** (`lib/engine/risk.ts`): red when a drain overflows; amber at 70 % full or when red is under 30 minutes away. Rules: [`docs/data-contracts.md`](docs/data-contracts.md).
+- **Simulator** (`lib/engine/sim.ts`): each minute, level rises with rain × how low the ground is, and falls with the drain's outflow. Low-lying zones flood first.
+- **Map**: MapLibre GL JS on OpenFreeMap, with OpenStreetMap streets and buildings.
+- **Backend**: Supabase (Postgres, Realtime, Auth, Edge Functions).
 
-To learn more about Next.js, take a look at the following resources:
+## What is simulated (and why)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+We have no access to real drain sensors, so drains are **simulated zones** of real streets; each zone's **ground height is real**. The storm is a 3-hour design storm. Water is shown as overflow depth along a zone's streets, not a hydraulic flow model. In a real township, off-the-shelf drain-level sensors would call the same risk engine.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Data, licences and AI use
 
-## Deploy on Vercel
+- Third-party software and data: [`docs/third-party.md`](docs/third-party.md)
+- AI disclosure (T&C cl. 13): [`docs/ai-use-log.md`](docs/ai-use-log.md)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Team
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*(names — add before submission)*

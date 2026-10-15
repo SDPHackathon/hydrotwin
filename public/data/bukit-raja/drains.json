@@ -1,0 +1,112 @@
+[
+  {
+    "id": "D01",
+    "name": "Drain D01",
+    "lng": 101.432274,
+    "lat": 3.0924,
+    "elevation_m": 5,
+    "bank_cm": 120,
+    "catchment_factor": 1.33,
+    "outflow_cm_per_min": 1.2,
+    "streets": 18
+  },
+  {
+    "id": "D02",
+    "name": "Drain D02",
+    "lng": 101.441159,
+    "lat": 3.090896,
+    "elevation_m": 5,
+    "bank_cm": 120,
+    "catchment_factor": 1.33,
+    "outflow_cm_per_min": 1.2,
+    "streets": 21
+  },
+  {
+    "id": "D03",
+    "name": "Drain D03",
+    "lng": 101.437544,
+    "lat": 3.088316,
+    "elevation_m": 6,
+    "bank_cm": 120,
+    "catchment_factor": 1.07,
+    "outflow_cm_per_min": 1.2,
+    "streets": 23
+  },
+  {
+    "id": "D04",
+    "name": "Drain D04",
+    "lng": 101.432988,
+    "lat": 3.087234,
+    "elevation_m": 6,
+    "bank_cm": 120,
+    "catchment_factor": 1.07,
+    "outflow_cm_per_min": 1.2,
+    "streets": 23
+  },
+  {
+    "id": "D05",
+    "name": "Drain D05",
+    "lng": 101.44344,
+    "lat": 3.087108,
+    "elevation_m": 5,
+    "bank_cm": 120,
+    "catchment_factor": 1.33,
+    "outflow_cm_per_min": 1.2,
+    "streets": 30
+  },
+  {
+    "id": "D06",
+    "name": "Drain D06",
+    "lng": 101.438367,
+    "lat": 3.084887,
+    "elevation_m": 5,
+    "bank_cm": 120,
+    "catchment_factor": 1.33,
+    "outflow_cm_per_min": 1.2,
+    "streets": 29
+  },
+  {
+    "id": "D07",
+    "name": "Drain D07",
+    "lng": 101.440302,
+    "lat": 3.082262,
+    "elevation_m": 4,
+    "bank_cm": 120,
+    "catchment_factor": 1.6,
+    "outflow_cm_per_min": 1.2,
+    "streets": 12
+  },
+  {
+    "id": "D08",
+    "name": "Drain D08",
+    "lng": 101.432827,
+    "lat": 3.081836,
+    "elevation_m": 4,
+    "bank_cm": 120,
+    "catchment_factor": 1.6,
+    "outflow_cm_per_min": 1.2,
+    "streets": 14
+  },
+  {
+    "id": "D09",
+    "name": "Drain D09",
+    "lng": 101.442741,
+    "lat": 3.080838,
+    "elevation_m": 5,
+    "bank_cm": 120,
+    "catchment_factor": 1.33,
+    "outflow_cm_per_min": 1.2,
+    "streets": 18
+  },
+  {
+    "id": "D10",
+    "name": "Drain D10",
+    "lng": 101.445254,
+    "lat": 3.080559,
+    "elevation_m": 7,
+    "bank_cm": 120,
+    "catchment_factor": 0.8,
+    "outflow_cm_per_min": 1.2,
+    "streets": 11
+  }
+]
