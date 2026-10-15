@@ -10,6 +10,7 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] Dashboard: 3D map, streets/drains coloured live, water on flooded streets, storm controls (local) — LIVE-1, LIVE-2
 - [x] Supabase schema + seed, checked on Postgres (`supabase/`)
 - [x] Water slabs: blue water rises on the roads of overflowing zones and spreads toward the houses (`flood-zones.geojson`, `lib/water.ts`)
+- [x] Fill rings on drains (blue dot grows with the level) · demo storm 126 mm/h → water spreads across 7 zones in order
 
 ## Step B — live loop on Supabase (16–17 Oct) ← next
 - [ ] Create the Supabase project (free) · **turn OFF public sign-ups** · create operator + guard accounts by hand

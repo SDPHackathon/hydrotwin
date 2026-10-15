@@ -19,7 +19,7 @@ The names here are the names in code, in the database and in the engine. Change 
 | `area.json` | `slug`, `name`, `bbox` [S, W, N, E], `center` [lng, lat], `attribution` |
 | `streets.geojson` | LineStrings · properties `id`, `name`, `highway`, `drain_id` |
 | `buildings.geojson` | Polygons · properties `id`, `height` (m; 7 m default when OSM has none) |
-| `flood-zones.geojson` | water-slab footprints: one MultiPolygon per drain + band · properties `id` (`D07-road`), `drain_id`, `band` (`road` 6 m / `yard` 18 m either side of the street) · built by `scripts/make-flood-zones.mjs` |
+| `flood-zones.geojson` | water-slab footprints: one MultiPolygon per drain + band · properties `id` (`D07-road`), `drain_id`, `band` (`road` 6 m / `yard` 24 m either side of the street) · built by `scripts/make-flood-zones.mjs` |
 | `drains.json` | `id`, `name`, `lng`, `lat`, `elevation_m`, `bank_cm`, `catchment_factor`, `outflow_cm_per_min`, `streets` (count) |
 
 ## Tables — `supabase/migrations/20261015000000_init.sql`
@@ -54,7 +54,9 @@ Input: a drain's level history (cm, one value per simulated minute, newest last)
 ## Simulator — `lib/engine/sim.ts`, `lib/engine/storm.ts`
 
 Each simulated minute: `level = max(0, level + rain_mm × catchment_factor − outflow_cm_per_min)`.
-`catchment_factor` runs from 0.8 (highest ground) to 1.6 (lowest), taken from real elevation. Plan-mode fixes change only `catchment_factor` or `outflow_cm_per_min`.
+`catchment_factor` = ground-height term from real elevation (0.8 highest … 1.6 lowest) + zone-size term (street count, up to ±0.1, breaks ties between zones at the same height). So low ground floods first, and among equal heights the bigger zone floods first. Plan-mode fixes change only `catchment_factor` or `outflow_cm_per_min`.
+
+With the current storm (peak ≈126 mm/h) the water spreads D08 → D07 → D05 → D06 → D02 → D01/D09 over ~22 storm-minutes, 5–50 cm deep; D03/D04 reach amber, D10 stays green.
 
 ## Live data flow (Step B)
 

@@ -6,7 +6,7 @@
     "lat": 3.0924,
     "elevation_m": 5,
     "bank_cm": 120,
-    "catchment_factor": 1.33,
+    "catchment_factor": 1.31,
     "outflow_cm_per_min": 1.2,
     "streets": 18
   },
@@ -17,7 +17,7 @@
     "lat": 3.090896,
     "elevation_m": 5,
     "bank_cm": 120,
-    "catchment_factor": 1.33,
+    "catchment_factor": 1.34,
     "outflow_cm_per_min": 1.2,
     "streets": 21
   },
@@ -28,7 +28,7 @@
     "lat": 3.088316,
     "elevation_m": 6,
     "bank_cm": 120,
-    "catchment_factor": 1.07,
+    "catchment_factor": 1.1,
     "outflow_cm_per_min": 1.2,
     "streets": 23
   },
@@ -39,7 +39,7 @@
     "lat": 3.087234,
     "elevation_m": 6,
     "bank_cm": 120,
-    "catchment_factor": 1.07,
+    "catchment_factor": 1.1,
     "outflow_cm_per_min": 1.2,
     "streets": 23
   },
@@ -50,7 +50,7 @@
     "lat": 3.087108,
     "elevation_m": 5,
     "bank_cm": 120,
-    "catchment_factor": 1.33,
+    "catchment_factor": 1.44,
     "outflow_cm_per_min": 1.2,
     "streets": 30
   },
@@ -61,7 +61,7 @@
     "lat": 3.084887,
     "elevation_m": 5,
     "bank_cm": 120,
-    "catchment_factor": 1.33,
+    "catchment_factor": 1.43,
     "outflow_cm_per_min": 1.2,
     "streets": 29
   },
@@ -72,7 +72,7 @@
     "lat": 3.082262,
     "elevation_m": 4,
     "bank_cm": 120,
-    "catchment_factor": 1.6,
+    "catchment_factor": 1.52,
     "outflow_cm_per_min": 1.2,
     "streets": 12
   },
@@ -83,7 +83,7 @@
     "lat": 3.081836,
     "elevation_m": 4,
     "bank_cm": 120,
-    "catchment_factor": 1.6,
+    "catchment_factor": 1.54,
     "outflow_cm_per_min": 1.2,
     "streets": 14
   },
@@ -94,7 +94,7 @@
     "lat": 3.080838,
     "elevation_m": 5,
     "bank_cm": 120,
-    "catchment_factor": 1.33,
+    "catchment_factor": 1.31,
     "outflow_cm_per_min": 1.2,
     "streets": 18
   },
@@ -105,7 +105,7 @@
     "lat": 3.080559,
     "elevation_m": 7,
     "bank_cm": 120,
-    "catchment_factor": 0.8,
+    "catchment_factor": 0.71,
     "outflow_cm_per_min": 1.2,
     "streets": 11
   }

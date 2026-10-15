@@ -103,10 +103,15 @@ async function main() {
   if (!elevRes.ok) throw new Error(`Open-Meteo ${elevRes.status}`);
   const { elevation } = await elevRes.json();
 
-  // Lower ground collects more run-off: lowest drain gets 1.6, highest 0.8.
+  // Run-off reaching each drain: ground height decides (lowest 1.6, highest 0.8) and the zone's
+  // size (street count ≈ paved area) adds up to ±0.1, which breaks ties between equal heights.
   const minE = Math.min(...elevation);
   const maxE = Math.max(...elevation);
   const lowness = (h) => (maxE === minE ? 0.5 : (maxE - h) / (maxE - minE));
+  const sizes = centres.map((_, i) => assign.filter((a) => a === i).length);
+  const meanSize = sizes.reduce((a, b) => a + b, 0) / sizes.length;
+  const sizeSpan = Math.max(...sizes) - Math.min(...sizes) || 1;
+  const catchment = (i) => 0.8 + 0.8 * lowness(elevation[i]) + (0.2 * (sizes[i] - meanSize)) / sizeSpan;
 
   const drains = centres
     .map((c, i) => ({
@@ -116,9 +121,9 @@ async function main() {
       lat: round(c[1]),
       elevation_m: elevation[i],
       bank_cm: 120,
-      catchment_factor: Math.round((0.8 + 0.8 * lowness(elevation[i])) * 100) / 100,
+      catchment_factor: Math.round(catchment(i) * 100) / 100,
       outflow_cm_per_min: 1.2,
-      streets: assign.filter((a) => a === i).length,
+      streets: sizes[i],
     }))
     .sort((a, b) => a.id.localeCompare(b.id));
 

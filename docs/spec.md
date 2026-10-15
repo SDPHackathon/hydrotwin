@@ -20,9 +20,9 @@ The 5-minute video (due with the submission, 23 Oct 11:59 PM) follows this story
 
 1. Calm township — dashboard all green.
 2. On a phone, the **control page**: *Start storm*. Rain rises.
-3. Drains fill. **D07 turns amber ~30 min before it overflows** → residents on its streets get an alert with an action ("Move your car to the multi-storey car park now").
-4. D07 overflows → **red** → the guard view lists vulnerable residents on red streets → guards tick them off; residents tap *I'm safe* / *I need help*.
-5. **Plan mode**: put a retention pond on D07 → replay the same storm → before / after (flooded streets, deepest water, minutes to first red).
+3. Drains fill (the rings on the map fill up). **The lowest zones (D07, D08) turn amber ~30 min before they overflow** → residents on its streets get an alert with an action ("Move your car to the multi-storey car park now").
+4. D07/D08 overflow → **red** → water spreads zone by zone → the guard view lists vulnerable residents on red streets → guards tick them off; residents tap *I'm safe* / *I need help*.
+5. **Plan mode**: put a retention pond on D08 (OSM already shows a flood retention pond nearby) → replay the same storm → before / after (flooded streets, deepest water, minutes to first red).
 6. **Safe routes**: from a house on a red street to the nearest safe point, avoiding red streets.
 
 ## Acceptance criteria
@@ -55,8 +55,8 @@ Building houses / roads / zoning, traffic simulation, real hydraulics, hardware,
 ## Simplifications we state out loud
 
 - **Drains are simulated zones**: real OSM streets grouped into 10 zones; each zone's ground height is real (Open-Meteo, ~90 m DEM), so low zones fill faster.
-- **The storm is a synthetic 3-hour design storm** (peak ≈108 mm/h) until we pick a recorded Klang storm.
-- **Water = drain overflow shown as depth along that zone's streets** — not a flow model. Slab height is drawn ×6 so ~20 cm is visible next to houses (`lib/water.ts`); the UI says so.
+- **The storm is a synthetic 3-hour design storm** (peak ≈126 mm/h, severe) until we pick a recorded Klang storm.
+- **Water = drain overflow shown as depth along that zone's streets** — not a flow model. Slab height is drawn ×4 so 5–50 cm is visible next to houses (`lib/water.ts`); the UI says so.
 - **No hardware**: a sensor is anything that can call the risk engine; a phone plays the sensor on stage. SDP would buy off-the-shelf level sensors; we are the software.
 
 ## Open decisions (team)

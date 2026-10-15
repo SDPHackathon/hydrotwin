@@ -7,7 +7,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 const AREA = "bukit-raja";
-const BANDS = { road: 6, yard: 18 }; // half-width in metres
+const BANDS = { road: 6, yard: 24 }; // half-width in metres
 const dir = new URL(`../public/data/${AREA}/`, import.meta.url);
 const streets = JSON.parse(await readFile(new URL("streets.geojson", dir), "utf8"));
 

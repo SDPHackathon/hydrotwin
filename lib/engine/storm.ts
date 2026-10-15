@@ -2,7 +2,7 @@
 // Placeholder until we pick a recorded Klang storm — source + licence go in docs/third-party.md.
 
 export const STORM_MINUTES = 180;
-export const PEAK_MM_PER_MIN = 1.8; // ≈108 mm/h, a heavy convective storm
+export const PEAK_MM_PER_MIN = 2.1; // ≈126 mm/h, a severe convective storm
 
 export function rainAt(minute: number): number {
   if (minute < 0 || minute >= 150) return 0;

@@ -117,14 +117,25 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
           },
         });
         m.addLayer({
-          id: "drains",
+          // Fill ring: the outer ring shows status, the blue dot inside grows as the drain fills.
+          id: "drain-ring",
           type: "circle",
           source: "drains",
           paint: {
-            "circle-radius": 7,
-            "circle-color": byStatus(STATUS_COLOR.green) as never,
-            "circle-stroke-color": "#ffffff",
-            "circle-stroke-width": 2,
+            "circle-radius": 14,
+            "circle-color": "#ffffff",
+            "circle-opacity": 0.95,
+            "circle-stroke-color": byStatus(STATUS_COLOR.green) as never,
+            "circle-stroke-width": 3.5,
+          },
+        });
+        m.addLayer({
+          id: "drain-fill",
+          type: "circle",
+          source: "drains",
+          paint: {
+            "circle-radius": ["*", 12, ["coalesce", ["feature-state", "fill"], 0]],
+            "circle-color": WATER_COLOR,
           },
         });
         m.addLayer({
@@ -135,7 +146,7 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
             "text-field": ["get", "id"],
             "text-font": ["Noto Sans Bold"],
             "text-size": 12,
-            "text-offset": [0, 1.3],
+            "text-offset": [0, 1.9],
           },
           paint: { "text-color": "#1c1917", "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
         });
@@ -162,7 +173,7 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
     for (const d of drains) {
       const s = statuses[d.id];
       if (!s) continue;
-      m.setFeatureState({ source: "drains", id: d.id }, { status: s.status });
+      m.setFeatureState({ source: "drains", id: d.id }, { status: s.status, fill: Math.min(1, s.level_cm / d.bank_cm) });
       const h = slabHeights(s.street_depth_cm);
       update.push(
         { id: `${d.id}-road`, addOrUpdateProperties: [{ key: "h", value: h.road }] },
