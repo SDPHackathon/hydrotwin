@@ -22,6 +22,20 @@ SDP Hackathon T&C cl. 14: everything we use must be lawfully obtained and licens
 | OpenStreetMap Nominatim | Geocoding search for dynamic township addition | ODbL 1.0 / Nominatim Usage Policy (max 1 req/sec, custom User-Agent) | "© OpenStreetMap contributors" |
 | Storm | rainfall pattern | synthetic, made by us (`lib/engine/storm.ts`) — replace with a recorded storm and add its source here | — |
 
-## To add in Step B
-- Agent skills copied into `.claude/skills/` — repo, commit SHA, licence, "modified" note if changed.
-- Supabase (hosted service, free plan) — terms of service.
+## Hosted services
+
+| Name | Used for | Terms |
+|---|---|---|
+| Supabase (free plan, project `hydrotwin`, Danish's org) | Postgres, Realtime, Auth | [Terms of Service](https://supabase.com/terms) · free plan = non-production, pauses after 7 days idle |
+
+## Agent skills (`.claude/skills/`, added 16 Oct)
+
+Copied verbatim from the vendors' official repos, pinned to a commit, licence file in each folder. Full table + update procedure: `.claude/skills/README.md`.
+
+| Skill | Source · commit | Licence | Modified? |
+|---|---|---|---|
+| `supabase` | supabase/agent-skills `c9be0e9` | MIT | yes — upstream "Skill Feedback" reference removed |
+| `supabase-postgres-best-practices` | supabase/agent-skills `c9be0e9` | MIT | no |
+| `vercel-react-best-practices` | vercel-labs/agent-skills `063bee9` | MIT (declared in SKILL.md; repo has no LICENSE file) | no |
+| `maplibre-tile-sources` | maplibre/maplibre-agent-skills `76a1942` | MIT (+ NOTICE, Mapbox) | no |
+| `maplibre-source-wiring` | maplibre/maplibre-agent-skills `76a1942` | MIT (+ NOTICE, Mapbox) | no |

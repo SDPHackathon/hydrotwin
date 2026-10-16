@@ -20,7 +20,7 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] `/control` (phone): start / pause / reset / speed + per-drain sliders → POST readings each tick
 - [x] Dashboard listens to `drain_status` via Realtime with local/cloud toggle — LIVE-3, LIVE-4
 - [x] Spike check: laptop dashboard + phone control page on the same Wi-Fi, colours change < 2 s
-- [ ] Copy the vetted skills into `.claude/skills/` (Azim)
+- [x] Copy the vetted skills into `.claude/skills/` (Azim, 16 Oct — 5 skills, pinned + licensed, `.claude/skills/README.md`)
 
 ## Step C — residents + guards ✅ (16 Oct)
 - [x] Fictional residents seed (some vulnerable, on D07/D08 streets) (`20261016000000_residents_and_realtime.sql`)
