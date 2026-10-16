@@ -21,3 +21,41 @@ export interface DrainStatus {
   minutes_to_red: number | null; // null when red already or not rising
   street_depth_cm: number; // water on the street = level above the bank
 }
+
+export type InterventionKind = "bigger_drain" | "retention_pond" | "green_area";
+
+export interface PlanIntervention {
+  drain_id: string;
+  kind: InterventionKind;
+}
+
+export interface ScenarioResult {
+  streets_flooded: number;
+  deepest_cm: number;
+  minutes_to_first_red: number | null;
+  flooded_drain_ids: string[];
+}
+
+export interface DemoResident {
+  id: string;
+  display_name: string;
+  street_id: string;
+  street_name?: string;
+  drain_id: string;
+  vulnerable: boolean;
+  needs: string | null;
+}
+
+export interface GuardTask {
+  id: string | number;
+  resident_id: string;
+  resident_name: string;
+  needs: string | null;
+  street_id: string;
+  street_name?: string;
+  drain_id: string;
+  state: "open" | "done";
+  check_in_state?: "safe" | "need_help" | null;
+  created_at: string;
+}
+

@@ -8,8 +8,9 @@ import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Area, Streets } from "@/lib/area";
-import type { Drain, DrainStatus } from "@/lib/engine/types";
+import type { Drain, DrainStatus, PlanIntervention } from "@/lib/engine/types";
 import { STATUS_COLOR, WATER_COLOR } from "@/lib/colors";
+import { makeInterventionsGeoJson } from "@/lib/interventions-geojson";
 import { slabHeights } from "@/lib/water";
 
 const BASE_STYLE = "https://tiles.openfreemap.org/styles/positron";
@@ -19,6 +20,11 @@ type Props = {
   drains: Drain[];
   streets: Streets;
   statuses: Record<string, DrainStatus>;
+  buildings?: GeoJSON.FeatureCollection;
+  floodZones?: GeoJSON.FeatureCollection;
+  interventions?: PlanIntervention[];
+  safeRoute?: [number, number][] | null;
+  onDrainClick?: (drainId: string) => void;
 };
 
 const byStatus = (fallback: string) => [
@@ -31,9 +37,23 @@ const byStatus = (fallback: string) => [
   fallback,
 ];
 
-export default function TownshipMap({ area, drains, streets, statuses }: Props) {
+export default function TownshipMap({
+  area,
+  drains,
+  streets,
+  statuses,
+  buildings,
+  floodZones,
+  interventions = [],
+  safeRoute = null,
+  onDrainClick,
+}: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
+  const onDrainClickRef = useRef(onDrainClick);
+  useEffect(() => {
+    onDrainClickRef.current = onDrainClick;
+  }, [onDrainClick]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -63,13 +83,29 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
           promoteId: "id",
           attribution: area.attribution,
         });
-        m.addSource("buildings", { type: "geojson", data: `/data/${area.slug}/buildings.geojson` });
+        m.addSource("buildings", {
+          type: "geojson",
+          data: buildings ?? `/data/${area.slug}/buildings.geojson`,
+        });
         // One feature per drain zone and band ("D07-road", "D07-yard"); height arrives via updateData.
         m.addSource("flood-zones", {
           type: "geojson",
-          data: `/data/${area.slug}/flood-zones.geojson`,
+          data: floodZones ?? `/data/${area.slug}/flood-zones.geojson`,
           promoteId: "id",
         });
+
+        // Plan Mode Interventions source
+        m.addSource("interventions", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+
+        // Safe Evacuation Route source
+        m.addSource("safe-route", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+
         m.addSource("drains", {
           type: "geojson",
           promoteId: "id",
@@ -93,6 +129,64 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
             "line-width": ["match", ["get", "highway"], ["primary", "secondary"], 5, "tertiary", 4, 2.5],
           },
         });
+
+        // Safe Evacuation Route Line
+        m.addLayer({
+          id: "safe-route-line",
+          type: "line",
+          source: "safe-route",
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: {
+            "line-color": "#059669",
+            "line-width": 6,
+            "line-opacity": 0.95,
+          },
+        });
+
+        // Plan Mode Layers: Green Parks & Retention Ponds
+        m.addLayer({
+          id: "interventions-green",
+          type: "fill",
+          source: "interventions",
+          filter: ["==", ["get", "kind"], "green_area"],
+          paint: {
+            "fill-color": "#16a34a",
+            "fill-opacity": 0.45,
+          },
+        });
+        m.addLayer({
+          id: "interventions-green-line",
+          type: "line",
+          source: "interventions",
+          filter: ["==", ["get", "kind"], "green_area"],
+          paint: {
+            "line-color": "#15803d",
+            "line-width": 2,
+            "line-dasharray": [3, 2],
+          },
+        });
+
+        m.addLayer({
+          id: "interventions-ponds",
+          type: "fill",
+          source: "interventions",
+          filter: ["==", ["get", "kind"], "retention_pond"],
+          paint: {
+            "fill-color": "#0284c7",
+            "fill-opacity": 0.7,
+          },
+        });
+        m.addLayer({
+          id: "interventions-ponds-line",
+          type: "line",
+          source: "interventions",
+          filter: ["==", ["get", "kind"], "retention_pond"],
+          paint: {
+            "line-color": "#0369a1",
+            "line-width": 2,
+          },
+        });
+
         m.addLayer({
           id: "buildings-3d",
           type: "fill-extrusion",
@@ -103,8 +197,8 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
             "fill-extrusion-opacity": 0.85,
           },
         });
+
         // A zero-height extrusion still paints its top face on the ground, so dry zones are filtered out.
-        // (Not "water" — the base style already uses that id for rivers and lakes.)
         m.addLayer({
           id: "flood-water",
           type: "fill-extrusion",
@@ -116,6 +210,21 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
             "fill-extrusion-opacity": 0.55,
           },
         });
+
+        // Plan Mode Upgraded Culvert Highlight Ring
+        m.addLayer({
+          id: "interventions-culverts",
+          type: "circle",
+          source: "interventions",
+          filter: ["==", ["get", "kind"], "bigger_drain"],
+          paint: {
+            "circle-radius": 19,
+            "circle-color": "transparent",
+            "circle-stroke-color": "#f59e0b",
+            "circle-stroke-width": 3.5,
+          },
+        });
+
         m.addLayer({
           // Fill ring: the outer ring shows status, the blue dot inside grows as the drain fills.
           id: "drain-ring",
@@ -150,6 +259,21 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
           },
           paint: { "text-color": "#1c1917", "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
         });
+
+        // Click on drain ring
+        m.on("click", "drain-ring", (e) => {
+          const id = e.features?.[0]?.properties?.id;
+          if (id && onDrainClickRef.current) {
+            onDrainClickRef.current(id);
+          }
+        });
+        m.on("mouseenter", "drain-ring", () => {
+          m.getCanvas().style.cursor = "pointer";
+        });
+        m.on("mouseleave", "drain-ring", () => {
+          m.getCanvas().style.cursor = "";
+        });
+
         setReady(true);
       });
     })();
@@ -159,7 +283,42 @@ export default function TownshipMap({ area, drains, streets, statuses }: Props) 
       map.current?.remove();
       map.current = null;
     };
-  }, [area, drains, streets]);
+  }, [area, drains, streets, buildings, floodZones]);
+
+  // Update interventions GeoJSON whenever interventions change
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m) return;
+    const source = m.getSource("interventions") as GeoJSONSource | undefined;
+    if (source) {
+      source.setData(makeInterventionsGeoJson(drains, interventions));
+    }
+  }, [drains, interventions, ready]);
+
+  // Update safe evacuation route GeoJSON
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m) return;
+    const source = m.getSource("safe-route") as GeoJSONSource | undefined;
+    if (source) {
+      source.setData({
+        type: "FeatureCollection",
+        features:
+          safeRoute && safeRoute.length > 0
+            ? [
+                {
+                  type: "Feature",
+                  properties: {},
+                  geometry: {
+                    type: "LineString",
+                    coordinates: safeRoute,
+                  },
+                },
+              ]
+            : [],
+      });
+    }
+  }, [ready, safeRoute]);
 
   // Push the latest status into feature-state — cheap, no data reload.
   useEffect(() => {

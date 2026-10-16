@@ -1,0 +1,15 @@
+{
+  "slug": "cyberjaya-selangor",
+  "name": "Cyberjaya, Selangor",
+  "bbox": [
+    2.911885,
+    101.663685,
+    2.925885,
+    101.678685
+  ],
+  "center": [
+    101.671185,
+    2.918885
+  ],
+  "attribution": "© OpenStreetMap contributors (ODbL) · Elevation: Open-Meteo (CC BY 4.0)"
+}

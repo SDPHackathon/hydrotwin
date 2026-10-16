@@ -5,12 +5,41 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 
-const AREA = {
-  slug: "bukit-raja",
-  name: "Bandar Bukit Raja, Klang",
-  // south, west, north, east
-  bbox: [3.0795, 101.4320, 3.0935, 101.4465],
+const PRESETS = {
+  "bukit-raja": {
+    slug: "bukit-raja",
+    name: "Bandar Bukit Raja, Klang",
+    // south, west, north, east
+    bbox: [3.0795, 101.4320, 3.0935, 101.4465],
+  },
+  "taman-sri-muda": {
+    slug: "taman-sri-muda",
+    name: "Taman Sri Muda, Shah Alam",
+    bbox: [3.0250, 101.5280, 3.0390, 101.5420],
+  },
 };
+
+function parseArgs() {
+  const args = process.argv.slice(2);
+  let preset = "bukit-raja";
+  let slug = "";
+  let name = "";
+  let bbox = null;
+
+  for (const arg of args) {
+    if (arg.startsWith("--preset=")) preset = arg.split("=")[1];
+    if (arg.startsWith("--slug=")) slug = arg.split("=")[1];
+    if (arg.startsWith("--name=")) name = arg.split("=")[1];
+    if (arg.startsWith("--bbox=")) bbox = arg.split("=")[1].split(",").map(Number);
+  }
+
+  if (slug && name && bbox && bbox.length === 4) {
+    return { slug, name, bbox };
+  }
+  return PRESETS[preset] || PRESETS["bukit-raja"];
+}
+
+const AREA = parseArgs();
 const DRAIN_COUNT = 10;
 const UA = "hydrotwin/0.1 (SDP University Hackathon 2026 prototype)";
 const OUT = new URL(`../public/data/${AREA.slug}/`, import.meta.url);

@@ -12,25 +12,26 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] Water slabs: blue water rises on the roads of overflowing zones and spreads toward the houses (`flood-zones.geojson`, `lib/water.ts`)
 - [x] Fill rings on drains (blue dot grows with the level) · demo storm 126 mm/h → water spreads across 7 zones in order
 
-## Step B — live loop on Supabase (16–17 Oct) ← next
-- [ ] Create the Supabase project (free) · **turn OFF public sign-ups** · create operator + guard accounts by hand
-- [ ] `supabase link` → `supabase db push` → run `supabase/seed.sql`
-- [ ] `.env.local` from `.env.example`
-- [ ] Edge Function `risk-engine` (contract in `data-contracts.md`) — import `lib/engine/` as is
-- [ ] `/control` (phone): start / pause / reset / speed + per-drain sliders → POST readings each tick
-- [ ] Dashboard listens to `drain_status` via Realtime instead of `useLocalStorm` — LIVE-3, LIVE-4
-- [ ] Spike check: laptop dashboard + phone control page on the same Wi-Fi, colours change < 2 s
+## Step B — live loop on Supabase ✅ (16 Oct)
+- [x] Create the Supabase project (free) · **turn OFF public sign-ups**
+- [x] Database schema + seed applied (`supabase/migrations/20261015000000_init.sql`, `supabase/seed.sql`)
+- [x] `.env.local` from `.env.example`
+- [x] Backend risk engine API (`/api/risk-engine`) running pure `assess()` & Supabase sync
+- [x] `/control` (phone): start / pause / reset / speed + per-drain sliders → POST readings each tick
+- [x] Dashboard listens to `drain_status` via Realtime with local/cloud toggle — LIVE-3, LIVE-4
+- [x] Spike check: laptop dashboard + phone control page on the same Wi-Fi, colours change < 2 s
 - [ ] Copy the vetted skills into `.claude/skills/` (Azim)
 
-## Step C — residents + guards (17–18 Oct)
-- [ ] Fictional residents seed (some vulnerable, on D07/D08 streets)
-- [ ] `/resident` — LIVE-5 · `/guard` — LIVE-6
+## Step C — residents + guards ✅ (16 Oct)
+- [x] Fictional residents seed (some vulnerable, on D07/D08 streets) (`20261016000000_residents_and_realtime.sql`)
+- [x] `/resident` (phone early warning, actions, SOS check-in) — LIVE-5
+- [x] `/guard` (phone incident response desk, vulnerable resident task list) — LIVE-6
 
-## Step D — Plan mode (19–20 Oct)
-- [ ] PLAN-1 · PLAN-2 · PLAN-3 (port useful HydroTwin prototype parts)
+## Step D — Plan mode ✅ (16 Oct)
+- [x] PLAN-1 · PLAN-2 · PLAN-3 (interventions, replay storm scorecard, 3D overlays, saved plans)
 
-## Step E — Safe routes (21 Oct)
-- [ ] ROUTE-1
+## Step E — Safe routes ✅ (16 Oct)
+- [x] ROUTE-1 (Dijkstra graph routing avoiding submerged red streets, 3D map emerald route overlay)
 
 ## Wrap-up
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)

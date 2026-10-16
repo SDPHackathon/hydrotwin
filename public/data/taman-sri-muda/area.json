@@ -1,0 +1,17 @@
+{
+  "slug": "taman-sri-muda",
+  "name": "Taman Sri Muda, Shah Alam",
+  "bbox": [
+    3.025,
+    101.528,
+    3.039,
+    101.542
+  ],
+  "center": [
+    101.535,
+    3.032
+  ],
+  "generated_at": "2026-10-16T06:56:25.411Z",
+  "osm_timestamp": "2026-10-16T06:54:41Z",
+  "attribution": "© OpenStreetMap contributors (ODbL) · Elevation: Open-Meteo (CC BY 4.0)"
+}

@@ -1,5 +1,5 @@
 // Loads a township's data from public/data/<slug>/ (built by `npm run data`). Server code only (uses fs).
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import type { Drain } from "@/lib/engine/types";
 
@@ -26,6 +26,27 @@ export interface Streets {
 async function readJson<T>(slug: string, file: string): Promise<T> {
   const raw = await readFile(path.join(process.cwd(), "public", "data", slug, file), "utf8");
   return JSON.parse(raw) as T;
+}
+
+export async function listAreas(): Promise<Area[]> {
+  const dataDir = path.join(process.cwd(), "public", "data");
+  try {
+    const entries = await readdir(dataDir, { withFileTypes: true });
+    const areas: Area[] = [];
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        try {
+          const area = await readJson<Area>(entry.name, "area.json");
+          areas.push(area);
+        } catch {
+          // Ignore incomplete/non-area directories
+        }
+      }
+    }
+    return areas;
+  } catch {
+    return [];
+  }
 }
 
 export async function loadArea(slug: string) {
