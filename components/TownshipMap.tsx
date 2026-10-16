@@ -37,6 +37,14 @@ const byStatus = (fallback: string) => [
   fallback,
 ];
 
+function drainPoints(drains: Drain[]): GeoJSON.Feature[] {
+  return drains.map((d) => ({
+    type: "Feature",
+    properties: { id: d.id },
+    geometry: { type: "Point", coordinates: [d.lng, d.lat] },
+  }));
+}
+
 export default function TownshipMap({
   area,
   drains,
@@ -55,6 +63,12 @@ export default function TownshipMap({
     onDrainClickRef.current = onDrainClick;
   }, [onDrainClick]);
   const [ready, setReady] = useState(false);
+  // Interventions only change a drain's outflow/catchment, never its position → the map must not be
+  // rebuilt when `drains` changes. The load handler reads this ref; a separate effect refreshes the source.
+  const drainsRef = useRef(drains);
+  useEffect(() => {
+    drainsRef.current = drains;
+  }, [drains]);
 
   useEffect(() => {
     let cancelled = false;
@@ -111,11 +125,7 @@ export default function TownshipMap({
           promoteId: "id",
           data: {
             type: "FeatureCollection",
-            features: drains.map((d) => ({
-              type: "Feature",
-              properties: { id: d.id },
-              geometry: { type: "Point", coordinates: [d.lng, d.lat] },
-            })),
+            features: drainPoints(drainsRef.current),
           },
         });
 
@@ -280,10 +290,18 @@ export default function TownshipMap({
 
     return () => {
       cancelled = true;
+      setReady(false);
       map.current?.remove();
       map.current = null;
     };
-  }, [area, drains, streets, buildings, floodZones]);
+  }, [area, streets, buildings, floodZones]);
+
+  // Drains changed (e.g. township switch) → refresh the points in place.
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m) return;
+    m.getSource<GeoJSONSource>("drains")?.setData({ type: "FeatureCollection", features: drainPoints(drains) });
+  }, [ready, drains]);
 
   // Update interventions GeoJSON whenever interventions change
   useEffect(() => {
