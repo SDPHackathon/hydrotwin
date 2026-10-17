@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // MapLibre worker copied from node_modules (scripts/copy-maplibre-worker.mjs)
     "public/maplibre/**",
+    // Agent skills library
+    ".claude/**",
+    // Supabase Edge Functions (Deno environment)
+    "supabase/functions/**",
   ]),
 ]);
 

@@ -22,9 +22,25 @@ export function useLocalStorm(drains: Drain[]) {
   const [speed, setSpeed] = useState(1); // simulated minutes per real second
   const minuteRef = useRef(0);
   const histories = useRef<Record<string, number[]>>(emptyHistories(drains));
+  const [prevDrains, setPrevDrains] = useState(drains);
   const [statuses, setStatuses] = useState<Record<string, DrainStatus>>(() =>
     statusesFrom(drains, emptyHistories(drains)),
   );
+
+  // When drains change (e.g. baseline vs with upgrades toggle, township switch),
+  // adjust state during render (official React pattern) without accessing refs.
+  if (drains !== prevDrains) {
+    setPrevDrains(drains);
+    setRunning(false);
+    setMinute(0);
+    setStatuses(statusesFrom(drains, emptyHistories(drains)));
+  }
+
+  // Update refs inside an effect (refs should only be written outside render).
+  useEffect(() => {
+    minuteRef.current = 0;
+    histories.current = emptyHistories(drains);
+  }, [drains]);
 
   const tick = useCallback(() => {
     const m = minuteRef.current;
@@ -34,7 +50,7 @@ export function useLocalStorm(drains: Drain[]) {
     }
     const rain = rainAt(m);
     for (const d of drains) {
-      const h = histories.current[d.id];
+      const h = histories.current[d.id] ?? (histories.current[d.id] = [0]);
       h.push(stepLevel(d, h.at(-1) ?? 0, rain));
       if (h.length > HISTORY) h.shift();
     }

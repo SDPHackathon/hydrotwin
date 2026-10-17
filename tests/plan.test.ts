@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applyInterventions, replayStorm } from "../lib/engine/plan.ts";
+import { applyInterventions, recommendInterventions, replayStorm } from "../lib/engine/plan.ts";
 import type { Drain, PlanIntervention } from "../lib/engine/types.ts";
 
 const sampleDrain: Drain = {
@@ -54,4 +54,27 @@ test("retention pond intervention significantly reduces flood depth", () => {
   if (planned.minutes_to_first_red !== null && baseline.minutes_to_first_red !== null) {
     assert.ok(planned.minutes_to_first_red >= baseline.minutes_to_first_red);
   }
+});
+
+test("recommendations use the supplied township IDs and improve the simulated outcome", () => {
+  const townshipDrain = { ...sampleDrain, id: "ZONE-A", name: "Zone A" };
+  const recommendation = recommendInterventions([townshipDrain], { "ZONE-A": 14 });
+
+  assert.ok(recommendation);
+  assert.ok(recommendation.interventions.length <= 2);
+  assert.ok(recommendation.interventions.every((inv) => inv.drain_id === "ZONE-A"));
+  assert.ok(recommendation.result.streets_flooded < recommendation.baseline.streets_flooded ||
+    recommendation.result.deepest_cm < recommendation.baseline.deepest_cm ||
+    (recommendation.result.minutes_to_first_red ?? Infinity) > (recommendation.baseline.minutes_to_first_red ?? Infinity));
+});
+
+test("recommendations return null when the demo storm causes no flooding", () => {
+  const highCapacityDrain = {
+    ...sampleDrain,
+    id: "ZONE-X",
+    catchment_factor: 0.1,
+    outflow_cm_per_min: 100,
+  };
+
+  assert.equal(recommendInterventions([highCapacityDrain], { "ZONE-X": 3 }), null);
 });

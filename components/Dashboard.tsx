@@ -6,7 +6,7 @@ import MobileLinksModal from "@/components/MobileLinksModal";
 import TownshipMap from "@/components/TownshipMap";
 import type { Area, Streets } from "@/lib/area";
 import { STATUS_COLOR } from "@/lib/colors";
-import { applyInterventions, replayStorm } from "@/lib/engine/plan";
+import { applyInterventions, recommendInterventions, replayStorm } from "@/lib/engine/plan";
 import { findSafeRoute, type RouteResult } from "@/lib/engine/route";
 import { STORM_MINUTES } from "@/lib/engine/storm";
 import type { Drain, DrainStatus, InterventionKind, PlanIntervention, Status } from "@/lib/engine/types";
@@ -118,6 +118,11 @@ function DashboardView({
 
   const baselineResult = useMemo(
     () => replayStorm(currentDrains, streetCountsByDrain),
+    [currentDrains, streetCountsByDrain],
+  );
+
+  const recommendation = useMemo(
+    () => recommendInterventions(currentDrains, streetCountsByDrain),
     [currentDrains, streetCountsByDrain],
   );
 
@@ -239,11 +244,10 @@ function DashboardView({
     setInterventions((prev) => prev.filter((inv) => inv.drain_id !== drainId));
   };
 
-  const applyRecommendedD08Fix = () => {
-    setInterventions([
-      { drain_id: "D08", kind: "retention_pond" },
-      { drain_id: "D07", kind: "bigger_drain" },
-    ]);
+  const applyRecommendedPlan = () => {
+    if (!recommendation) return;
+    setInterventions(recommendation.interventions);
+    setScenarioName(`Recommended plan for ${currentArea.name}`);
   };
 
   const saveScenario = () => {
@@ -289,6 +293,15 @@ function DashboardView({
     }
   };
 
+  // Active interventions shown on the 3D map:
+  // - Plan mode: always visible so civil engineers can design and test upgrades
+  // - Live Warning / Safe Routes: only visible when "With Upgrades" scenario is active
+  const activeInterventions = useMemo(() => {
+    if (mode === "plan") return interventions;
+    if (simulationScenario === "plan") return interventions;
+    return [];
+  }, [mode, simulationScenario, interventions]);
+
   return (
     <div className="grid h-dvh grid-rows-[1fr_auto] lg:grid-cols-[1fr_390px] lg:grid-rows-1">
       <TownshipMap
@@ -298,7 +311,7 @@ function DashboardView({
         buildings={currentBuildings}
         floodZones={currentFloodZones}
         statuses={activeStatuses}
-        interventions={interventions}
+        interventions={activeInterventions}
         safeRoute={mode === "route" ? safeRouteResult?.coordinates : null}
         onDrainClick={(drainId) => {
           setSelectedDrainId(drainId);
@@ -521,13 +534,28 @@ function DashboardView({
                 {interventions.length === 0 && (
                   <button
                     type="button"
-                    onClick={applyRecommendedD08Fix}
-                    className="text-xs font-medium text-blue-600 hover:underline"
+                    onClick={applyRecommendedPlan}
+                    disabled={!recommendation}
+                    className="text-xs font-medium text-blue-600 hover:underline disabled:cursor-not-allowed disabled:text-stone-400"
                   >
-                    Apply Recommended (D08 Takungan)
+                    {recommendation
+                      ? `Apply Recommended (${recommendation.interventions.map((inv) => `${inv.drain_id} ${inv.kind.replaceAll("_", " ")}`).join(" + ")})`
+                      : "No upgrade improves this storm"}
                   </button>
                 )}
               </div>
+
+              {recommendation && interventions.length === 0 && (
+                <p className="rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-900">
+                  Under the demo storm, the recommended plan reduces flooded streets from {recommendation.baseline.streets_flooded} to {recommendation.result.streets_flooded}
+                  {recommendation.baseline.deepest_cm > recommendation.result.deepest_cm
+                    ? ` and peak water depth from ${recommendation.baseline.deepest_cm} cm to ${recommendation.result.deepest_cm} cm.`
+                    : "."}
+                  {recommendation.baseline.minutes_to_first_red !== recommendation.result.minutes_to_first_red && (
+                    <> First overflow changes from {recommendation.baseline.minutes_to_first_red === null ? "none" : `minute ${recommendation.baseline.minutes_to_first_red}`} to {recommendation.result.minutes_to_first_red === null ? "none" : `minute ${recommendation.result.minutes_to_first_red}`}.</>
+                  )}
+                </p>
+              )}
 
               {interventions.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-stone-200 p-3.5 text-center text-xs text-stone-400">
@@ -761,7 +789,7 @@ function DashboardView({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-stone-500">Map Visualization:</span>
-                        <span className="font-semibold text-emerald-700">Emerald line on 3D Map</span>
+                        <span className="font-semibold text-violet-700">Violet line on 3D Map</span>
                       </div>
                     </div>
                   </div>
@@ -830,7 +858,7 @@ function DashboardView({
                   type="button"
                   onClick={() => {
                     if (interventions.length === 0) {
-                      applyRecommendedD08Fix();
+                      applyRecommendedPlan();
                     }
                     setSimulationScenario("plan");
                     storm.reset();
@@ -912,24 +940,48 @@ function DashboardView({
             <section>
               <h2 className="mb-2 text-sm font-medium text-stone-500">Drains</h2>
               <ul className="flex flex-col gap-2">
-                {ranked.map(({ drain, s }) => (
-                  <li key={drain.id} className="rounded-lg border border-stone-200 px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2.5 rounded-full" style={{ background: STATUS_COLOR[s.status] }} />
-                      <span className="font-medium">{drain.id}</span>
-                      <span className="ml-auto text-xs text-stone-500">{describe(s, drain)}</span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100">
-                      <div
-                        className="h-full rounded-full transition-[width] duration-500"
-                        style={{
-                          width: `${Math.min(100, (s.level_cm / drain.bank_cm) * 100)}%`,
-                          background: STATUS_COLOR[s.status],
-                        }}
-                      />
-                    </div>
-                  </li>
-                ))}
+                {ranked.map(({ drain, s }) => {
+                  const activeInv =
+                    simulationScenario === "plan"
+                      ? interventions.find((inv) => inv.drain_id === drain.id)
+                      : null;
+
+                  return (
+                    <li key={drain.id} className="rounded-lg border border-stone-200 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <span className="size-2.5 rounded-full" style={{ background: STATUS_COLOR[s.status] }} />
+                        <span className="font-medium">{drain.id}</span>
+                        {activeInv && (
+                          <span
+                            className={`rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wider ${
+                              activeInv.kind === "retention_pond"
+                                ? "bg-sky-100 text-sky-800"
+                                : activeInv.kind === "bigger_drain"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-emerald-100 text-emerald-800"
+                            }`}
+                          >
+                            {activeInv.kind === "retention_pond"
+                              ? "Pond (-40% Runoff)"
+                              : activeInv.kind === "bigger_drain"
+                                ? "Culvert (1.5× Outflow)"
+                                : "Sponge (-20% Runoff)"}
+                          </span>
+                        )}
+                        <span className="ml-auto text-xs text-stone-500">{describe(s, drain)}</span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100">
+                        <div
+                          className="h-full rounded-full transition-[width] duration-500"
+                          style={{
+                            width: `${Math.min(100, (s.level_cm / drain.bank_cm) * 100)}%`,
+                            background: STATUS_COLOR[s.status],
+                          }}
+                        />
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             </section>
           </>

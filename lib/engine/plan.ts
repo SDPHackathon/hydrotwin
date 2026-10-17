@@ -11,6 +11,14 @@ export const INTERVENTION_EFFECTS = {
   green_area: { outflowMult: 1.0, catchmentMult: 0.8 },
 } as const;
 
+const INTERVENTION_KINDS = Object.keys(INTERVENTION_EFFECTS) as PlanIntervention["kind"][];
+
+export interface RecommendedPlan {
+  interventions: PlanIntervention[];
+  baseline: ScenarioResult;
+  result: ScenarioResult;
+}
+
 export function applyInterventions(drains: Drain[], interventions: PlanIntervention[]): Drain[] {
   const interventionMap = new Map<string, PlanIntervention[]>();
   for (const inv of interventions) {
@@ -85,4 +93,65 @@ export function replayStorm(
     minutes_to_first_red: minutesToFirstRed,
     flooded_drain_ids: Array.from(floodedDrains).sort(),
   };
+}
+
+function compareResults(a: ScenarioResult, b: ScenarioResult): number {
+  return (
+    a.streets_flooded - b.streets_flooded ||
+    a.deepest_cm - b.deepest_cm ||
+    (b.minutes_to_first_red ?? Infinity) - (a.minutes_to_first_red ?? Infinity)
+  );
+}
+
+function isBetterPlan(a: RecommendedPlan, b: RecommendedPlan): boolean {
+  const resultOrder = compareResults(a.result, b.result);
+  if (resultOrder !== 0) return resultOrder < 0;
+  if (a.interventions.length !== b.interventions.length) {
+    return a.interventions.length < b.interventions.length;
+  }
+  return a.interventions.map((inv) => `${inv.drain_id}:${inv.kind}`).join("|") <
+    b.interventions.map((inv) => `${inv.drain_id}:${inv.kind}`).join("|");
+}
+
+/** Finds the best plan of zero, one, or two upgrades under the current synthetic storm. */
+export function recommendInterventions(
+  drains: Drain[],
+  streetsCountByDrain: Record<string, number>,
+): RecommendedPlan | null {
+  if (drains.length === 0) return null;
+
+  const baseline = replayStorm(drains, streetsCountByDrain);
+  const candidates = drains.flatMap((drain) =>
+    INTERVENTION_KINDS.map((kind) => {
+      const intervention = { drain_id: drain.id, kind } satisfies PlanIntervention;
+      return {
+        intervention,
+        result: replayStorm(applyInterventions(drains, [intervention]), streetsCountByDrain),
+      };
+    }),
+  );
+
+  let best: RecommendedPlan = { interventions: [], baseline, result: baseline };
+  const consider = (interventions: PlanIntervention[], result: ScenarioResult) => {
+    const candidate = { interventions, baseline, result };
+    if (isBetterPlan(candidate, best)) best = candidate;
+  };
+
+  for (const candidate of candidates) {
+    consider([candidate.intervention], candidate.result);
+  }
+
+  // Test all valid pairs against the whole township so unaffected drains stay in the score.
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      const a = candidates[i];
+      const b = candidates[j];
+      if (a.intervention.drain_id === b.intervention.drain_id) continue;
+      const interventions = [a.intervention, b.intervention];
+      const result = replayStorm(applyInterventions(drains, interventions), streetsCountByDrain);
+      consider(interventions, result);
+    }
+  }
+
+  return compareResults(best.result, baseline) < 0 ? best : null;
 }

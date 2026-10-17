@@ -29,6 +29,7 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 
 ## Step D — Plan mode ✅ (16 Oct)
 - [x] PLAN-1 · PLAN-2 · PLAN-3 (interventions, replay storm scorecard, 3D overlays, saved plans)
+- [x] Dynamic recommended upgrades scored against the active township and demo storm
 
 ## Step E — Safe routes ✅ (16 Oct)
 - [x] ROUTE-1 (Dijkstra graph routing avoiding submerged red streets, 3D map emerald route overlay)

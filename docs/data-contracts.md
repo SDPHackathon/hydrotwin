@@ -58,6 +58,10 @@ Each simulated minute: `level = max(0, level + rain_mm × catchment_factor − o
 
 With the current storm (peak ≈126 mm/h) the water spreads D08 → D07 → D05 → D06 → D02 → D01/D09 over ~22 storm-minutes, 5–50 cm deep; D03/D04 reach amber, D10 stays green.
 
+### Recommended upgrades
+
+Plan mode evaluates the current township against the existing synthetic storm. It selects up to two interventions on distinct drains, ranking outcomes by fewer flooded streets, lower peak street depth, later first overflow (no overflow is best), then fewer interventions. It recommends no changes if no candidate improves the baseline. These are results under the demo simulator and its assumed intervention multipliers, not a hydraulic or engineering design assessment.
+
 ## Live data flow (Step B)
 
 ```

@@ -9,7 +9,7 @@ import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Area, Streets } from "@/lib/area";
 import type { Drain, DrainStatus, PlanIntervention } from "@/lib/engine/types";
-import { STATUS_COLOR, WATER_COLOR } from "@/lib/colors";
+import { SAFE_ROUTE_COLOR, STATUS_COLOR, WATER_COLOR } from "@/lib/colors";
 import { makeInterventionsGeoJson } from "@/lib/interventions-geojson";
 import { slabHeights } from "@/lib/water";
 
@@ -142,12 +142,23 @@ export default function TownshipMap({
 
         // Safe Evacuation Route Line
         m.addLayer({
+          id: "safe-route-casing",
+          type: "line",
+          source: "safe-route",
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: {
+            "line-color": "#ffffff",
+            "line-width": 10,
+            "line-opacity": 0.95,
+          },
+        });
+        m.addLayer({
           id: "safe-route-line",
           type: "line",
           source: "safe-route",
           layout: { "line-cap": "round", "line-join": "round" },
           paint: {
-            "line-color": "#059669",
+            "line-color": SAFE_ROUTE_COLOR,
             "line-width": 6,
             "line-opacity": 0.95,
           },

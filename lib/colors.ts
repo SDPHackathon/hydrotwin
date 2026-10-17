@@ -7,3 +7,6 @@ export const STATUS_COLOR: Record<Status, string> = {
 };
 
 export const WATER_COLOR = "#2563eb";
+
+// Keep route guidance visually separate from the green, amber, and red road statuses.
+export const SAFE_ROUTE_COLOR = "#7c3aed";
