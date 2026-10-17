@@ -1,5 +1,6 @@
-import type { Drain, DrainStatus, GuardTask } from "@/lib/engine/types";
+import type { Drain, DrainStatus, GuardTask, HelpType } from "@/lib/engine/types";
 import { assess } from "@/lib/engine/risk";
+import { applyTaskAction, type HelpRequest, type TaskAction } from "@/lib/engine/help";
 import { DEMO_RESIDENTS } from "@/lib/residents-data";
 import { getServerSupabase } from "@/lib/supabase";
 import drainsData from "@/public/data/bukit-raja/drains.json";
@@ -11,7 +12,10 @@ interface ServerStore {
   histories: Record<string, number[]>;
   statuses: Record<string, DrainStatus>;
   guardTasks: GuardTask[];
-  checkIns: Array<{ id: string | number; resident_id: string; state: "safe" | "need_help"; created_at: string }>;
+  checkIns: Array<{
+    id: string | number; resident_id: string; state: "safe" | "need_help"; created_at: string;
+    help_type: HelpType | null; people: number | null; note: string | null;
+  }>;
 }
 
 const drains: Drain[] = drainsData as Drain[];
@@ -143,7 +147,7 @@ function openGuardTasksForDrain(drainId: string) {
 
   for (const res of vulnerableResidents) {
     const existing = store.guardTasks.find(
-      (t) => t.resident_id === res.id && t.state === "open",
+      (t) => t.resident_id === res.id && t.state !== "done",
     );
     if (!existing) {
       const task: GuardTask = {
@@ -174,72 +178,78 @@ function openGuardTasksForDrain(drainId: string) {
   }
 }
 
-export function recordCheckIn(residentId: string, state: "safe" | "need_help") {
-  const resident = DEMO_RESIDENTS.find((r) => r.id === residentId);
-  const checkIn = {
-    id: `chk-${Date.now()}`,
-    resident_id: residentId,
-    state,
-    created_at: new Date().toISOString(),
-  };
-  store.checkIns.unshift(checkIn);
+// Best-effort copy to Supabase — the laptop's store is the demo's source of truth. Failures are logged, never thrown.
+function mirror(write: (sb: ReturnType<typeof getServerSupabase>) => PromiseLike<{ error: unknown }>, what: string) {
+  try {
+    void write(getServerSupabase()).then(({ error }) => {
+      if (error) console.error(`Supabase mirror failed (${what}):`, error);
+    });
+  } catch (err) {
+    console.error(`Supabase mirror failed (${what}):`, err);
+  }
+}
 
-  // If need_help, open or escalate guard task
-  if (state === "need_help" && resident) {
-    const existingTask = store.guardTasks.find(
-      (t) => t.resident_id === residentId && t.state === "open",
-    );
-    if (existingTask) {
-      existingTask.check_in_state = "need_help";
+const liveTaskOf = (residentId: string) =>
+  store.guardTasks.find((t) => t.resident_id === residentId && t.state !== "done");
+
+/** "safe" or "need_help" (+ what for). A call while a task is live updates the ask; the guard keeps their place. */
+export function recordCheckIn(residentId: string, state: "safe" | "need_help", request: HelpRequest | null = null) {
+  const resident = DEMO_RESIDENTS.find((r) => r.id === residentId);
+  if (!resident) return { ok: false as const, error: "unknown resident" };
+  const now = new Date().toISOString();
+  const help: HelpRequest | null = state === "need_help" ? (request ?? { help_type: "other", people: 1, note: null }) : null;
+
+  store.checkIns.unshift({
+    id: `chk-${Date.now()}`, resident_id: residentId, state, created_at: now,
+    help_type: help?.help_type ?? null, people: help?.people ?? null, note: help?.note ?? null,
+  });
+
+  const live = liveTaskOf(residentId);
+  if (help) {
+    if (live) {
+      Object.assign(live, { check_in_state: "need_help", ...help });
     } else {
       store.guardTasks.unshift({
         id: `task-urgent-${Date.now()}`,
         resident_id: residentId,
         resident_name: resident.display_name,
-        needs: resident.needs || "Resident urgently requested assistance",
+        needs: resident.needs,
         street_id: resident.street_id,
         street_name: resident.street_name,
         drain_id: resident.drain_id,
         state: "open",
         check_in_state: "need_help",
-        created_at: new Date().toISOString(),
+        created_at: now,
+        ...help,
       });
+      mirror((sb) => sb.from("guard_tasks").insert([{ resident_id: residentId, drain_id: resident.drain_id, state: "open", ...help }]), "guard_tasks insert");
     }
-  } else if (state === "safe") {
-    const existingTask = store.guardTasks.find(
-      (t) => t.resident_id === residentId && t.state === "open",
-    );
-    if (existingTask) {
-      existingTask.check_in_state = "safe";
-    }
+  } else if (live) {
+    live.check_in_state = "safe";
   }
 
-  // Push to Supabase asynchronously
-  try {
-    const sb = getServerSupabase();
-    sb.from("check_ins").insert([{
-      resident_id: residentId,
-      state,
-    }]).then();
-  } catch {
-    // Non-blocking
-  }
-
-  return { ok: true, checkIn };
+  mirror((sb) => sb.from("check_ins").insert([{ resident_id: residentId, state, ...(help ?? {}) }]), "check_ins insert");
+  return { ok: true as const, task: liveTaskOf(residentId) ?? null };
 }
 
-export function closeGuardTask(taskId: string | number) {
-  const task = store.guardTasks.find((t) => t.id === taskId);
-  if (task) {
-    task.state = "done";
-  }
+export function acceptGuardTask(taskId: string | number, responder: string | null) {
+  return transitionTask(taskId, "accept", responder);
+}
 
-  try {
-    const sb = getServerSupabase();
-    sb.from("guard_tasks").update({ state: "done", done_at: new Date().toISOString() }).eq("id", taskId).then();
-  } catch {
-    // Non-blocking
-  }
+export function closeGuardTask(taskId: string | number, responder: string | null = null) {
+  return transitionTask(taskId, "resolve", responder);
+}
 
-  return { ok: true, task };
+function transitionTask(taskId: string | number, action: TaskAction, responder: string | null) {
+  const index = store.guardTasks.findIndex((t) => String(t.id) === String(taskId));
+  if (index < 0) return { ok: false as const, error: "unknown task" };
+  const result = applyTaskAction(store.guardTasks[index], action, responder, new Date().toISOString());
+  if (!result.ok) return result;
+  const task = result.task;
+  store.guardTasks[index] = task;
+  // Cloud ids differ from the laptop's; the live task is unique per resident (index guard_tasks_one_open).
+  mirror((sb) => sb.from("guard_tasks")
+    .update({ state: task.state, accepted_at: task.accepted_at ?? null, responder_name: task.responder_name ?? null, done_at: task.done_at ?? null })
+    .eq("resident_id", task.resident_id).in("state", ["open", "on_the_way"]), "guard_tasks update");
+  return { ok: true as const, task };
 }

@@ -46,6 +46,9 @@ export interface DemoResident {
   needs: string | null;
 }
 
+export type TaskState = "open" | "on_the_way" | "done";
+export type HelpType = "trapped" | "medical" | "evacuate" | "water_in_house" | "other";
+
 export interface GuardTask {
   id: string | number;
   resident_id: string;
@@ -54,8 +57,15 @@ export interface GuardTask {
   street_id: string;
   street_name?: string;
   drain_id: string;
-  state: "open" | "done";
+  state: TaskState;
   check_in_state?: "safe" | "need_help" | null;
   created_at: string;
+  // Call-for-help loop (lib/engine/help.ts). Optional: tasks the risk engine opens at red carry none of these.
+  help_type?: HelpType | null;
+  people?: number | null;
+  note?: string | null;
+  accepted_at?: string | null;
+  responder_name?: string | null;
+  done_at?: string | null;
 }
 

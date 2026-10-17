@@ -33,12 +33,13 @@ The 5-minute video (due with the submission, 23 Oct 11:59 PM) follows this story
 | LIVE-2 | Risk rules as in `data-contracts.md`, covered by `npm test` | ✅ |
 | LIVE-3 | Phone control page: start / pause / reset / speed + a level slider per drain (for judges' questions) → readings reach the risk engine | Step B |
 | LIVE-4 | Dashboard, resident page and guard view update from Supabase Realtime, not local state | Step B |
-| LIVE-5 | Resident page (phone): pick a demo resident → see your street's status → alert with an action when your drain turns amber → *I'm safe* / *I need help* | Step C |
-| LIVE-6 | Guard view (phone, login): at red, open tasks for vulnerable residents on red streets; *need help* on top; tick done | Step C |
+| LIVE-5 | Resident page (phone): pick a demo resident → see your street's status → alert with an action when your drain turns amber → *I'm safe* / *I need help* with what for (type, people, note) → live tracker: sent → guard on the way → resolved | ✅ Step C · two-way in Step F |
+| LIVE-6 | Guard view (phone): at red, open tasks for vulnerable residents on red streets; *need help* on top with the ask and an elapsed timer; alert sound; *On my way* → *Resolved* | ✅ Step C · two-way in Step F |
 | PLAN-1 | Pick a drain → apply one fix. Draft effects: bigger drain = outflow ×1.5 · retention pond = catchment ×0.6 · green area = catchment ×0.8 (team: find a source for the numbers or call them assumptions) | Step D |
 | PLAN-2 | Replay the storm instantly (run the engine in a loop, no waiting) → before / after table: streets flooded, deepest water (cm), minutes to first red | Step D |
 | PLAN-3 | Save a scenario to `plan_scenarios`; compare two | Step D |
 | ROUTE-1 | Red streets blocked; shortest path on the OSM road graph from a chosen house to the nearest safe point | Step E |
+| ROUTE-2 | Responder route: nearest guard post → the resident's street, dry roads first, the wet stretch measured and drawn separately (`findResponderRoute`) | Step F |
 
 ## Build order — one builder, so depth before breadth
 
@@ -47,6 +48,7 @@ The 5-minute video (due with the submission, 23 Oct 11:59 PM) follows this story
 3. Plan mode (PLAN-1…3). Port the useful parts of the HydroTwin prototype here (terrain, building geometry, hydrology visuals) — but the before / after numbers come from `lib/engine/`, so Live and Plan always agree.
 4. Safe routes (ROUTE-1).
 5. Optional, only if 1–4 are solid: a Gemini copilot that explains a plan's before / after in plain words (declare it in the AI disclosure).
+6. **Step F (Azim, from 17 Oct)** — the call-for-help loop made two-way (LIVE-5, LIVE-6) + the responder route (ROUTE-2); phone pages installable.
 
 ## Out of scope
 

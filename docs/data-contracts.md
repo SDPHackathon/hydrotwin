@@ -31,11 +31,29 @@ The names here are the names in code, in the database and in the engine. Change 
 | `readings` | every sensor / simulator reading | **risk-engine function only** | engine |
 | `drain_status` | latest status per drain | **risk-engine function only** | everyone (Realtime) |
 | `residents` | **fictional** residents, `vulnerable`, `needs` | seed | guards |
-| `check_ins` | *I'm safe* / *I need help* | check-in function | guards (Realtime) |
-| `guard_tasks` | one open task per vulnerable resident on a red street | risk engine (open), guards (close) | guards (Realtime) |
+| `check_ins` | *I'm safe* / *I need help* + what for (`help_type`, `people`, `note`) | check-in API | guards (Realtime) |
+| `guard_tasks` | one live task per resident — opened at red for vulnerable residents, or by *I need help*; `open → on_the_way → done` | risk engine (open), guards (accept, resolve) | guards + the resident who called (Realtime) |
 | `plan_scenarios` | Plan-mode changes + results | plan page | everyone |
 
-RLS is on for every table. Clients only read; every write goes through an Edge Function with the service role, except a guard closing their own task.
+RLS is on for every table. Clients only read; every write goes through the server with the service role, except a guard accepting or closing a task.
+
+## Call for help — `lib/engine/help.ts`
+
+A resident's *I need help* **is** a guard task. Tasks move `open → on_the_way → done`; `resolve` also works straight from `open`; a `done` task never reopens. One live task per resident (index `guard_tasks_one_open`); a second call while a task is live updates the ask and keeps the responding guard.
+
+| Field | Values |
+|---|---|
+| `help_type` | `trapped` · `medical` · `evacuate` · `water_in_house` · `other` (default) |
+| `people` | whole number 1–10 (default 1) |
+| `note` | ≤ 80 characters, trimmed; empty → null |
+| `accepted_at`, `responder_name` | set by *On my way* (`accept`); `responder_name` ≤ 40 characters — guards pick a display name, there is no guard login in the demo |
+| `done_at` | set by *Resolved* (`resolve`) |
+
+Migration `20261018000000_help_loop.sql`. API: `POST /api/resident/check-in { resident_id, state, help_type?, people?, note? }` · `GET /api/guard-tasks?resident_id=…` (the resident follows their own task) · `POST /api/guard-tasks { taskId, action: "accept" | "resolve", responder }`.
+
+### Responder route — `findResponderRoute()`
+
+Shortest route from the nearest **fictional guard post** (`lib/guards-data.ts`) to the **middle of the resident's street**. Unlike the evacuation router, a responder may wade: red roads stay in the graph at `WATER_PENALTY` (4) × their length, so water is used only where no dry road reaches the resident; `dry_m` and `water_m` are reported separately and the map draws the wet stretch dashed. Unknown-status roads are left out; a post on a red street cannot start a route. Roads connect only at shared vertices — the Bukit Raja OSM extract (`npm run data`, road classes primary … living_street) leaves the Zapin / Cendana estate (D07 / D09 / D10) unconnected from the rest of the network, which is why there are two posts. Re-fetching with service roads would reconnect it, but re-clusters the drains and changes every demo number — not before 23 Oct.
 
 ## Status rules — `lib/engine/risk.ts`
 
@@ -95,3 +113,4 @@ phone /control ──POST readings──▶ Edge Function risk-engine ──▶ 
 | dashboard, resident | `drain_status` | UPDATE |
 | guard | `guard_tasks` | INSERT, UPDATE |
 | guard | `check_ins` | INSERT |
+| resident | `guard_tasks` | UPDATE (their own task: on the way / resolved) |
