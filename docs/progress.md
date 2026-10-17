@@ -36,6 +36,15 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] Township-specific safe destinations, nearest reachable walking route, explicit failures, and violet route endpoint markers
 - [x] Click-to-pin origin and safe destination along road segments, alongside dropdown selection
 
+## Step F — call for help, two-way (Azim, 17 Oct →)
+- [x] Engine: help request rules, task lifecycle `open → on_the_way → done`, responder route from the nearest guard post (`lib/engine/help.ts`, `lib/guards-data.ts`, 12 tests)
+- [x] Server + API: check-in carries the ask; `accept` / `resolve` with the guard's name; migration `20261018000000_help_loop.sql`; contracts updated
+- [x] `/resident`: help sheet (type, people, note) → live tracker (sent → on the way → resolved), vibration on changes
+- [x] `/guard`: pick a guard, Start shift (alert sound), SOS cards with the ask + elapsed timer, *On my way* → *Resolved*
+- [x] Route to the resident on a small map, wet stretch dashed — ROUTE-2 (`components/ResponderMap.tsx`)
+- [x] Installable phone pages (manifests + icons) · README phone section (same Wi-Fi link, Add to Home Screen)
+- [ ] Azim's phone on the laptop's Wi-Fi: Add to Home Screen, Start shift beep, full loop phone ↔ phone
+
 ## Wrap-up
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)
 - [ ] 22 Oct: full run-through · README final · AI-use log + third-party list complete · repo public

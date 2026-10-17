@@ -1,0 +1,14 @@
+{
+  "name": "HydroTwin Guard",
+  "short_name": "Guard",
+  "description": "Duty desk for township guards: help calls, vulnerable residents on flooded streets, route to each one.",
+  "start_url": "/guard",
+  "scope": "/guard",
+  "display": "standalone",
+  "background_color": "#f5f5f4",
+  "theme_color": "#1c1917",
+  "icons": [
+    { "src": "/icons/guard-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/guard-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

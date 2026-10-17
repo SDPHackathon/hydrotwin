@@ -31,6 +31,21 @@ drain sensors (simulated) → risk engine → street status → map · resident 
 - **Map**: MapLibre GL JS on OpenFreeMap, with OpenStreetMap streets and buildings.
 - **Backend**: Supabase (Postgres, Realtime, Auth, Edge Functions).
 
+## On a phone — resident, guard, control
+
+The laptop running `npm run dev` **is** the server. Put the phone on the same Wi-Fi and open
+`http://<laptop-ip>:3000/resident`, `/guard` or `/control` (`ipconfig getifaddr en0` on macOS, `ipconfig` on
+Windows gives the IP; the dashboard's **📱 Phone Links** button lists the paths). **Add to Home Screen** installs
+each page as an app icon — iPhone: Share → Add to Home Screen (opens full-screen); Android: ⋮ → Add to Home
+screen (full-screen needs HTTPS, so over the Wi-Fi link it opens as a shortcut). Alerts work while the page is
+open: the guard desk sounds new help calls after one tap on **Start shift**, Android phones vibrate. The phone
+pages are Bukit Raja only.
+
+**Call for help, two-way.** A resident taps *I need help*, says what for and for how many, and then watches
+the task live: sent → *Guard Rahim is on the way* → resolved. The guard desk shows the ask and how long it has
+waited, and **Route** draws the way from the nearest guard post — dry roads first, the stretch through water
+measured and dashed (`lib/engine/help.ts`; rules in [`docs/data-contracts.md`](docs/data-contracts.md)).
+
 ## What is simulated (and why)
 
 We have no access to real drain sensors, so drains are **simulated zones** of real streets; each zone's **ground height is real**. The storm is a 3-hour design storm. Water is shown as overflow depth along a zone's streets, not a hydraulic flow model. In a real township, off-the-shelf drain-level sensors would call the same risk engine.
