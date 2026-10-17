@@ -3,7 +3,9 @@
 // Small 2D map for the guard's phone: streets coloured by status, the responder route on top —
 // dry stretches solid violet (the dashboard's safe-route colour), the wet stretch dashed blue.
 // Base map: OpenFreeMap positron (free, no key). Layer ids are prefixed so they never clash with
-// the base style's own ids (it has a `water` layer).
+// the base style's own ids (it has a `water` layer). MapLibre's attribution box opens expanded on a
+// narrow map and would cover a third of it, so the credit is printed under the map instead
+// (MAP_ATTRIBUTION — the parent must render it). Gestures are cooperative: one finger scrolls the page.
 
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
@@ -14,7 +16,7 @@ import type { Status } from "@/lib/engine/types";
 import { SAFE_ROUTE_COLOR, STATUS_COLOR, WATER_COLOR } from "@/lib/colors";
 
 const BASE_STYLE = "https://tiles.openfreemap.org/styles/positron";
-const OSM_ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors (ODbL)';
+export const MAP_ATTRIBUTION = "Map © OpenStreetMap contributors (ODbL) · OpenFreeMap © OpenMapTiles · MapLibre";
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
 type Props = {
@@ -64,6 +66,7 @@ export default function ResponderMap({ streets, statuses, route, center, classNa
   const map = useRef<MapLibreMap | null>(null);
   const [ready, setReady] = useState(false);
   const initial = useRef({ streets, statuses, route, center });
+  const lastFit = useRef(""); // the route recomputes on every poll; only re-frame when its shape changes
 
   useEffect(() => {
     let cancelled = false;
@@ -72,12 +75,15 @@ export default function ResponderMap({ streets, statuses, route, center, classNa
       const { Map, setWorkerUrl } = await import("maplibre-gl");
       if (cancelled || !container.current) return;
       setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
-      const m = new Map({ container: container.current, style: BASE_STYLE, center: initial.current.center, zoom: 15, pitch: 0 });
+      const m = new Map({
+        container: container.current, style: BASE_STYLE, center: initial.current.center, zoom: 15, pitch: 0,
+        attributionControl: false, cooperativeGestures: true, dragRotate: false, pitchWithRotate: false, touchPitch: false,
+      });
       map.current = m;
 
       m.on("load", () => {
         const { streets, statuses, route } = initial.current;
-        m.addSource("responder-streets", { type: "geojson", data: streetsGeoJson(streets, statuses), attribution: OSM_ATTRIBUTION });
+        m.addSource("responder-streets", { type: "geojson", data: streetsGeoJson(streets, statuses) });
         m.addSource("responder-route", { type: "geojson", data: routeGeoJson(route) });
         m.addSource("responder-points", { type: "geojson", data: pointsGeoJson(route) });
 
@@ -140,6 +146,9 @@ export default function ResponderMap({ streets, statuses, route, center, classNa
     const m = map.current;
     (m.getSource("responder-route") as GeoJSONSource | undefined)?.setData(routeGeoJson(route));
     (m.getSource("responder-points") as GeoJSONSource | undefined)?.setData(pointsGeoJson(route));
+    const fitKey = route?.found ? route.coordinates.map((c) => c.join()).join(";") : (route?.destination?.join() ?? "");
+    if (!fitKey || fitKey === lastFit.current) return;
+    lastFit.current = fitKey;
     if (route?.found && route.coordinates.length > 1) {
       const lngs = route.coordinates.map((c) => c[0]), lats = route.coordinates.map((c) => c[1]);
       m.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], { padding: 40, maxZoom: 17, duration: 600 });

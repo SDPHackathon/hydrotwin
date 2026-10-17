@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   icons: { apple: "/icons/resident-180.png" },
 };
 
-export const viewport: Viewport = { themeColor: "#1d4ed8", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#1d4ed8", width: "device-width", initialScale: 1, viewportFit: "cover" };
 
 export default function ResidentLayout({ children }: { children: React.ReactNode }) {
   return children;

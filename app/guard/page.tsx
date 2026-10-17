@@ -4,10 +4,11 @@
 // sound until a gesture), each card shows what was asked and how long it has waited, and moves
 // On my way → Resolved. "Route" draws the way from the nearest guard post (lib/engine/help.ts).
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
-import ResponderMap from "@/components/ResponderMap";
+import { useEffect, useMemo, useRef, useState } from "react";
+import PhoneHeader from "@/components/PhoneHeader";
+import ResponderMap, { MAP_ATTRIBUTION } from "@/components/ResponderMap";
 import { GUARDS, GUARD_POSTS } from "@/lib/guards-data";
+import { useStoredValue } from "@/lib/useStoredValue";
 import { findResponderRoute, HELP_TYPES, type ResponderOutcome } from "@/lib/engine/help";
 import type { StreetFeature } from "@/lib/engine/route";
 import type { DrainStatus, GuardTask, HelpType, Status, TaskState } from "@/lib/engine/types";
@@ -15,6 +16,9 @@ import type { DrainStatus, GuardTask, HelpType, Status, TaskState } from "@/lib/
 const POLL_MS = 1500;
 const GUARD_KEY = "hydrotwin_guard_name";
 const BUKIT_RAJA_CENTER: [number, number] = [101.4392, 3.0865];
+const ACTION_COOLDOWN_MS = 600; // "On my way" turns into "Resolved" in the same spot — swallow the second tap of a double-tap
+// Clears the sticky header (and the notch when installed full-screen) when scrolling a section into view.
+const SCROLL_MARGIN = "scroll-mt-[calc(5.5rem+env(safe-area-inset-top))]";
 
 const timeOf = (iso: string) => new Date(iso).toLocaleTimeString("en-MY", { hour: "numeric", minute: "2-digit" });
 const elapsed = (fromIso: string, now: number) => {
@@ -34,7 +38,7 @@ const ROUTE_MESSAGE: Record<Exclude<ResponderOutcome, "found">, string> = {
 const STATE_BADGE: Record<TaskState, { label: string; className: string }> = {
   open: { label: "Waiting", className: "bg-amber-100 text-amber-800" },
   on_the_way: { label: "On the way", className: "bg-blue-600 text-white" },
-  done: { label: "Assisted", className: "bg-emerald-100 text-emerald-800" },
+  done: { label: "Resolved", className: "bg-emerald-100 text-emerald-800" },
 };
 
 function vibrate(pattern: number | number[]) {
@@ -58,41 +62,9 @@ function beep(ctx: AudioContext, freq: number, at: number, dur: number) {
   osc.stop(ctx.currentTime + at + dur + 0.05);
 }
 
-// Which guard this phone is — a per-phone convenience kept in localStorage (memory when that is blocked).
-let memoryGuard = GUARDS[0];
-const guardListeners = new Set<() => void>();
-const guardStore = {
-  subscribe(cb: () => void) {
-    guardListeners.add(cb);
-    window.addEventListener("storage", cb);
-    return () => {
-      guardListeners.delete(cb);
-      window.removeEventListener("storage", cb);
-    };
-  },
-  get() {
-    try {
-      const saved = localStorage.getItem(GUARD_KEY);
-      if (saved && GUARDS.includes(saved)) return saved;
-    } catch {
-      // storage unavailable
-    }
-    return memoryGuard;
-  },
-  getServerSnapshot: () => GUARDS[0],
-  set(name: string) {
-    memoryGuard = name;
-    try {
-      localStorage.setItem(GUARD_KEY, name);
-    } catch {
-      // storage unavailable
-    }
-    guardListeners.forEach((cb) => cb());
-  },
-};
-
 export default function GuardPage() {
-  const guard = useSyncExternalStore(guardStore.subscribe, guardStore.get, guardStore.getServerSnapshot);
+  const [storedGuard, pickGuard] = useStoredValue(GUARD_KEY); // which guard this phone is
+  const guard = storedGuard && GUARDS.includes(storedGuard) ? storedGuard : GUARDS[0];
   const [shiftOn, setShiftOn] = useState(false);
   const [tasks, setTasks] = useState<GuardTask[]>([]);
   const [statuses, setStatuses] = useState<Record<string, DrainStatus>>({});
@@ -101,22 +73,24 @@ export default function GuardPage() {
   const [loading, setLoading] = useState(true);
   const [routeTaskId, setRouteTaskId] = useState<string | number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [busyTaskId, setBusyTaskId] = useState<string | number | null>(null);
   const [now, setNow] = useState(0);
   const audio = useRef<AudioContext | null>(null);
-  const announced = useRef<Set<string> | null>(null); // live tasks already alerted; null until the first poll
-
-  const pickGuard = guardStore.set;
+  const announced = useRef<Set<string> | null>(null); // live tasks already alerted; null until the first poll lands
+  const mutation = useRef(0); // bumped by every successful action, so a poll that started before it can't undo it
+  const routePanel = useRef<HTMLElement>(null);
 
   // Poll tasks and statuses from the laptop running the server.
   useEffect(() => {
     let mounted = true;
     const poll = async () => {
+      const seq = mutation.current;
       try {
         const [taskRes, statusRes] = await Promise.all([fetch("/api/guard-tasks"), fetch("/api/risk-engine")]);
         if (!mounted) return;
         if (taskRes.ok) {
           const data = await taskRes.json();
-          if (mounted && data.guardTasks) setTasks(data.guardTasks);
+          if (mounted && data.guardTasks && seq === mutation.current) setTasks(data.guardTasks);
         }
         if (statusRes.ok) {
           const data = await statusRes.json();
@@ -158,11 +132,38 @@ export default function GuardPage() {
     return () => clearInterval(interval);
   }, []);
 
+  // Notices clear themselves; the timer is cancelled if the page goes away first.
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 3500);
+    return () => clearTimeout(timer);
+  }, [notice]);
+
+  // iOS suspends the AudioContext when the phone sleeps or the app goes to the background — wake it on return.
+  useEffect(() => {
+    const wake = () => {
+      if (document.visibilityState === "visible" && audio.current && audio.current.state !== "running") void audio.current.resume();
+    };
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("pageshow", wake);
+    return () => {
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("pageshow", wake);
+    };
+  }, []);
+
+  // Bring the route panel (above the list) into view when a card's Route is tapped.
+  useEffect(() => {
+    if (routeTaskId !== null) routePanel.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [routeTaskId]);
+
   // Alert on tasks that are new since the last poll (a resident escalating to need_help counts as new).
+  // Tasks already on the desk when the page opens are the baseline, not news.
   useEffect(() => {
     const live = tasks.filter((t) => t.state !== "done");
     const keyOf = (t: GuardTask) => `${t.id}:${t.check_in_state ?? ""}`;
     if (announced.current === null) {
+      if (loading) return;
       announced.current = new Set(live.map(keyOf));
       return;
     }
@@ -173,6 +174,7 @@ export default function GuardPage() {
     vibrate(sos ? [300, 100, 300, 100, 300] : [200]);
     const ctx = audio.current;
     if (ctx) {
+      if (ctx.state !== "running") void ctx.resume();
       if (sos) {
         beep(ctx, 880, 0, 0.15);
         beep(ctx, 880, 0.22, 0.15);
@@ -181,7 +183,7 @@ export default function GuardPage() {
         beep(ctx, 660, 0, 0.2);
       }
     }
-  }, [tasks]);
+  }, [tasks, loading]);
 
   const startShift = () => {
     try {
@@ -195,6 +197,8 @@ export default function GuardPage() {
   };
 
   const act = async (taskId: string | number, action: "accept" | "resolve") => {
+    if (busyTaskId !== null) return;
+    setBusyTaskId(taskId);
     try {
       const res = await fetch("/api/guard-tasks", {
         method: "POST",
@@ -204,13 +208,16 @@ export default function GuardPage() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setNotice(data.error ?? "Could not update the task.");
-        setTimeout(() => setNotice(null), 3500);
         return;
       }
-      if (data.task) setTasks((prev) => prev.map((t) => (t.id === data.task.id ? data.task : t)));
+      if (data.task) {
+        mutation.current++;
+        setTasks((prev) => prev.map((t) => (t.id === data.task.id ? data.task : t)));
+      }
     } catch {
       setNotice("No connection to the HydroTwin server.");
-      setTimeout(() => setNotice(null), 3500);
+    } finally {
+      setTimeout(() => setBusyTaskId(null), ACTION_COOLDOWN_MS);
     }
   };
 
@@ -242,24 +249,14 @@ export default function GuardPage() {
     });
 
   return (
-    <div className="min-h-screen bg-stone-100 text-stone-900 pb-16">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-stone-200 px-4 py-3 shadow-xs">
-        <div className="max-w-md mx-auto flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-stone-900 tracking-tight">HydroTwin Guard Response</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-stone-800 text-white font-medium">Duty Desk</span>
-            </div>
-            <p className="text-[11px] text-stone-500">Bukit Raja Security & Auxiliary Police</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <Link href="/" className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium">Map</Link>
-            <Link href="/control" className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium">Control</Link>
-            <Link href="/resident" className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium">Resident</Link>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen touch-manipulation bg-stone-100 text-stone-900 pb-[calc(4rem+env(safe-area-inset-bottom))]">
+      <PhoneHeader
+        title="HydroTwin Guard"
+        badge="Duty Desk"
+        badgeClassName="bg-stone-800 text-white"
+        subtitle="Bukit Raja security desk"
+        links={[{ href: "/", label: "Map" }, { href: "/control", label: "Control" }, { href: "/resident", label: "Resident" }]}
+      />
 
       <main className="max-w-md mx-auto px-4 pt-4 space-y-4">
         {/* Who is on duty + sound */}
@@ -269,7 +266,7 @@ export default function GuardPage() {
             <select
               value={guard}
               onChange={(e) => pickGuard(e.target.value)}
-              className="mt-0.5 w-full text-sm font-semibold bg-stone-50 border border-stone-300 rounded-lg p-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400"
+              className="mt-0.5 w-full text-base font-semibold bg-stone-50 border border-stone-300 rounded-lg p-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-stone-400"
             >
               {GUARDS.map((g) => (
                 <option key={g} value={g}>Guard {g}</option>
@@ -279,7 +276,7 @@ export default function GuardPage() {
           {shiftOn ? (
             <span className="text-xs font-semibold text-emerald-700 whitespace-nowrap">🔔 Alerts on</span>
           ) : (
-            <button onClick={startShift} className="px-3 py-2.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold shadow-xs whitespace-nowrap">
+            <button onClick={startShift} className="min-h-11 px-3 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold shadow-xs whitespace-nowrap">
               🔔 Start shift
             </button>
           )}
@@ -294,7 +291,7 @@ export default function GuardPage() {
             <div className="text-[11px] text-stone-500 font-medium">Red Zones</div>
             <div className="text-xl font-bold font-mono text-rose-600 mt-0.5">
               {redDrains.length}
-              <span className="text-xs text-stone-400 font-normal"> / 10</span>
+              <span className="text-xs text-stone-500 font-normal"> / 10</span>
             </div>
           </div>
           <div className={`p-3 rounded-xl border shadow-xs ${sosCount > 0 ? "bg-rose-50 border-rose-300 animate-pulse" : "bg-white border-stone-200"}`}>
@@ -305,16 +302,16 @@ export default function GuardPage() {
             <div className="text-[11px] text-stone-500 font-medium">Active Tasks</div>
             <div className="text-xl font-bold font-mono text-stone-900 mt-0.5">
               {live.length}
-              <span className="text-xs text-stone-400 font-normal"> ({doneCount} done)</span>
+              <span className="text-xs text-stone-500 font-normal"> ({doneCount} done)</span>
             </div>
           </div>
         </div>
 
         {/* Route panel */}
         {routeTask && (
-          <section className="bg-white rounded-xl border border-violet-300 p-3 shadow-xs">
+          <section ref={routePanel} className={`bg-white rounded-xl border border-violet-300 p-3 shadow-xs ${SCROLL_MARGIN}`}>
             <div className="flex items-start justify-between gap-2">
-              <div>
+              <div className="min-w-0">
                 <h2 className="text-sm font-semibold text-stone-900">Route to {routeTask.resident_name}</h2>
                 <p className="text-xs text-stone-600 mt-0.5">
                   {!streets
@@ -326,12 +323,13 @@ export default function GuardPage() {
                     : ""}
                 </p>
               </div>
-              <button onClick={() => setRouteTaskId(null)} aria-label="Close route" className="px-2 py-1 rounded text-stone-500 hover:bg-stone-100">✕</button>
+              <button onClick={() => setRouteTaskId(null)} aria-label="Close route" className="h-10 w-10 -mr-1.5 -mt-1.5 shrink-0 rounded-lg text-stone-500 hover:bg-stone-100">✕</button>
             </div>
             <div className="mt-2">
               <ResponderMap streets={streets ?? []} statuses={statusMap} route={route} center={BUKIT_RAJA_CENTER} />
             </div>
-            <p className="mt-2 text-[11px] text-stone-500">
+            <p className="mt-1 text-[10px] text-stone-500">{MAP_ATTRIBUTION}</p>
+            <p className="mt-1.5 text-[11px] text-stone-500">
               Walking route on OpenStreetMap roads under the current simulated statuses; the dashed part is through water. Not a verified evacuation plan.
             </p>
           </section>
@@ -343,7 +341,7 @@ export default function GuardPage() {
             <button
               key={id}
               onClick={() => setFilter(id)}
-              className={`flex-1 py-1.5 rounded-md transition ${
+              className={`flex-1 min-h-10 rounded-md transition ${
                 filter === id ? (id === "sos" ? "bg-rose-600 text-white shadow-xs" : "bg-white text-stone-900 shadow-xs") : "text-stone-600 hover:text-stone-900"
               }`}
             >
@@ -385,7 +383,7 @@ export default function GuardPage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div>
+                  <div className="min-w-0">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-semibold text-stone-900 text-sm">{t.resident_name}</span>
                       {isSos && (
@@ -406,7 +404,7 @@ export default function GuardPage() {
                   <div className="mt-2.5 p-2 bg-white/80 rounded-lg border border-rose-200 text-xs">
                     <span className="font-semibold text-rose-800">{helpLabel(t.help_type)}</span>
                     <span className="text-stone-700"> · {t.people ?? 1} {(t.people ?? 1) === 1 ? "person" : "people"}</span>
-                    {t.note && <div className="text-stone-700 mt-0.5">“{t.note}”</div>}
+                    {t.note && <div className="text-stone-700 mt-0.5 wrap-break-word">“{t.note}”</div>}
                   </div>
                 )}
                 {t.needs && (
@@ -417,36 +415,36 @@ export default function GuardPage() {
                 )}
 
                 <div className="mt-3 pt-2.5 border-t border-stone-200/60 flex items-center justify-between gap-2">
-                  <span className="text-[11px] text-stone-500">
+                  <span className="min-w-0 text-[11px] leading-snug text-stone-500">
                     {isDone
-                      ? `Resolved ${t.done_at ? timeOf(t.done_at) : ""}${t.responder_name ? ` by ${t.responder_name}` : ""}`
+                      ? `Resolved ${t.done_at ? timeOf(t.done_at) : ""}${t.responder_name ? ` by Guard ${t.responder_name}` : ""}`
                       : t.state === "on_the_way"
-                      ? `${t.responder_name ?? "A guard"} on the way · ${now ? elapsed(t.accepted_at ?? t.created_at, now) : "—"}`
+                      ? `Guard ${t.responder_name ?? ""} on the way · ${now ? elapsed(t.accepted_at ?? t.created_at, now) : "0:00"}`
                       : t.check_in_state === "safe"
                       ? "✅ Resident reported safe"
-                      : `Waiting · ${now ? elapsed(t.created_at, now) : "—"} · since ${timeOf(t.created_at)}`}
+                      : `Waiting · ${now ? elapsed(t.created_at, now) : "0:00"} · since ${timeOf(t.created_at)}`}
                   </span>
-                  {!isDone ? (
+                  {!isDone && (
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => setRouteTaskId(routeTaskId === t.id ? null : t.id)}
                         aria-pressed={routeTaskId === t.id}
-                        className="px-2.5 py-1.5 rounded-lg border border-violet-300 text-violet-800 text-xs font-semibold hover:bg-violet-50"
+                        className={`min-h-10 px-3 rounded-lg border text-xs font-semibold ${
+                          routeTaskId === t.id ? "bg-violet-600 border-violet-600 text-white" : "border-violet-300 text-violet-800 hover:bg-violet-50"
+                        }`}
                       >
                         Route
                       </button>
                       {t.state === "open" ? (
-                        <button onClick={() => act(t.id, "accept")} className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs">
+                        <button onClick={() => act(t.id, "accept")} disabled={busyTaskId !== null} className="min-h-10 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs disabled:opacity-60">
                           On my way
                         </button>
                       ) : (
-                        <button onClick={() => act(t.id, "resolve")} className="px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold shadow-xs">
+                        <button onClick={() => act(t.id, "resolve")} disabled={busyTaskId !== null} className="min-h-10 px-3 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold shadow-xs disabled:opacity-60">
                           Resolved ✓
                         </button>
                       )}
                     </div>
-                  ) : (
-                    <span className="text-xs text-emerald-700 font-semibold">Done ✓</span>
                   )}
                 </div>
               </div>
