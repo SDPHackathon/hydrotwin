@@ -12,6 +12,7 @@ import type { Drain, DrainStatus, PlanIntervention } from "@/lib/engine/types";
 import { SAFE_ROUTE_COLOR, STATUS_COLOR, WATER_COLOR } from "@/lib/colors";
 import { makeInterventionsGeoJson } from "@/lib/interventions-geojson";
 import { slabHeights } from "@/lib/water";
+import type { RoadPoint } from "@/lib/engine/route";
 
 const BASE_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
@@ -24,7 +25,10 @@ type Props = {
   floodZones?: GeoJSON.FeatureCollection;
   interventions?: PlanIntervention[];
   safeRoute?: [number, number][] | null;
+  routeOrigin?: [number, number] | null;
+  routeDestination?: [number, number] | null;
   onDrainClick?: (drainId: string) => void;
+  onRoutePick?: (point: RoadPoint | null) => void;
 };
 
 const byStatus = (fallback: string) => [
@@ -54,11 +58,20 @@ export default function TownshipMap({
   floodZones,
   interventions = [],
   safeRoute = null,
+  routeOrigin = null,
+  routeDestination = null,
   onDrainClick,
+  onRoutePick,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
+  const lastRoute = useRef("");
   const onDrainClickRef = useRef(onDrainClick);
+  const onRoutePickRef = useRef(onRoutePick);
+  useEffect(() => {
+    onRoutePickRef.current = onRoutePick;
+    if (map.current) map.current.getCanvas().style.cursor = onRoutePick ? "crosshair" : "";
+  }, [onRoutePick]);
   useEffect(() => {
     onDrainClickRef.current = onDrainClick;
   }, [onDrainClick]);
@@ -162,6 +175,18 @@ export default function TownshipMap({
             "line-width": 6,
             "line-opacity": 0.95,
           },
+        });
+
+        // Plan Mode Layers: Green Parks & Retention Ponds
+        m.addSource("route-points", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        m.addLayer({
+          id: "route-point-circles", type: "circle", source: "route-points",
+          paint: { "circle-radius": 11, "circle-color": SAFE_ROUTE_COLOR, "circle-stroke-color": "#ffffff", "circle-stroke-width": 3 },
+        });
+        m.addLayer({
+          id: "route-point-labels", type: "symbol", source: "route-points",
+          layout: { "text-field": ["get", "label"], "text-size": 13, "text-allow-overlap": true },
+          paint: { "text-color": "#ffffff" },
         });
 
         // Plan Mode Layers: Green Parks & Retention Ponds
@@ -283,16 +308,43 @@ export default function TownshipMap({
 
         // Click on drain ring
         m.on("click", "drain-ring", (e) => {
+          if (onRoutePickRef.current) return;
           const id = e.features?.[0]?.properties?.id;
           if (id && onDrainClickRef.current) {
             onDrainClickRef.current(id);
           }
         });
         m.on("mouseenter", "drain-ring", () => {
-          m.getCanvas().style.cursor = "pointer";
+          m.getCanvas().style.cursor = onRoutePickRef.current ? "crosshair" : "pointer";
         });
         m.on("mouseleave", "drain-ring", () => {
-          m.getCanvas().style.cursor = "";
+          m.getCanvas().style.cursor = onRoutePickRef.current ? "crosshair" : "";
+        });
+
+        m.on("click", (e) => {
+          if (!onRoutePickRef.current) return;
+          let nearest: RoadPoint | null = null;
+          let best = 24 * 24;
+          for (const street of streets.features) {
+            const coords = street.geometry.coordinates;
+            for (let i = 0; i + 1 < coords.length; i++) {
+              const a = m.project(coords[i] as [number, number]);
+              const b = m.project(coords[i + 1] as [number, number]);
+              const dx = b.x - a.x, dy = b.y - a.y;
+              const size = dx * dx + dy * dy;
+              if (!size) continue;
+              const t = Math.max(0, Math.min(1, ((e.point.x - a.x) * dx + (e.point.y - a.y) * dy) / size));
+              const x = a.x + t * dx, y = a.y + t * dy;
+              const d = (e.point.x - x) ** 2 + (e.point.y - y) ** 2;
+              if (d >= best) continue;
+              const projected = m.unproject([x, y]);
+              const lng = coords[i + 1][0] - coords[i][0], lat = coords[i + 1][1] - coords[i][1];
+              const fraction = Math.max(0, Math.min(1, ((projected.lng - coords[i][0]) * lng + (projected.lat - coords[i][1]) * lat) / (lng * lng + lat * lat)));
+              best = d;
+              nearest = { street_id: street.properties.id, position: { segment_index: i, fraction } };
+            }
+          }
+          onRoutePickRef.current(nearest);
         });
 
         setReady(true);
@@ -333,7 +385,7 @@ export default function TownshipMap({
       source.setData({
         type: "FeatureCollection",
         features:
-          safeRoute && safeRoute.length > 0
+          safeRoute && safeRoute.length > 1
             ? [
                 {
                   type: "Feature",
@@ -347,7 +399,24 @@ export default function TownshipMap({
             : [],
       });
     }
-  }, [ready, safeRoute]);
+    const points = m.getSource("route-points") as GeoJSONSource | undefined;
+    points?.setData({
+      type: "FeatureCollection",
+      features: [
+        ...(routeOrigin ? [{ type: "Feature" as const, properties: { label: "O" }, geometry: { type: "Point" as const, coordinates: routeOrigin } }] : []),
+        ...(routeDestination ? [{ type: "Feature" as const, properties: { label: "D" }, geometry: { type: "Point" as const, coordinates: routeDestination } }] : []),
+      ],
+    });
+    const routeKey = JSON.stringify(safeRoute);
+    if (safeRoute?.length && routeKey !== lastRoute.current) {
+      const lngs = safeRoute.map((point) => point[0]);
+      const lats = safeRoute.map((point) => point[1]);
+      m.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], {
+        padding: 45, maxZoom: 16, duration: 500,
+      });
+    }
+    lastRoute.current = routeKey;
+  }, [ready, safeRoute, routeOrigin, routeDestination]);
 
   // Push the latest status into feature-state — cheap, no data reload.
   useEffect(() => {

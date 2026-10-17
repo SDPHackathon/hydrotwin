@@ -64,6 +64,12 @@ Plan mode evaluates the current township against the existing synthetic storm. I
 
 ## Live data flow (Step B)
 
+### Demo route destinations
+
+`hydrotwin_destinations_<area.slug>` in device localStorage contains `{ id, name, street_id, kind: "demo", position?: { segment_index, fraction } }[]`. Dropdown points use the first vertex of an existing street; map pins use a validated segment index and fraction (0–1). Clicks snap to a road within 24 screen pixels; distant clicks are rejected. Routing splits that segment at the anchor, including both pins on the same segment. Points are unverified as real evacuation locations. Empty lists require user configuration; no drain is implicitly a shelter. Existing saved points without `position` remain compatible. No database schema changes are required.
+
+Routing uses the selected street's first vertex or a map pin as origin, excludes red and unknown roads, and permits amber roads with a warning. Eligible destinations require green status. Automatic mode chooses the shortest reachable destination by network distance. Street vertices connect only at identical supplied coordinates; crossings alone do not connect. Roads are treated as bidirectional walking links. Results distinguish missing destinations, invalid/blocked/unknown origins, unavailable destinations, disconnected data, and routes blocked by red/unknown roads. Excluded street counts describe the entire loaded township. Routes reflect current statuses and do not forecast flooding during travel.
+
 ```
 phone /control ──POST readings──▶ Edge Function risk-engine ──▶ readings (insert)
  (or a real sensor)                    │  assess() from lib/engine

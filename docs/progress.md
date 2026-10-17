@@ -33,6 +33,8 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 
 ## Step E — Safe routes ✅ (16 Oct)
 - [x] ROUTE-1 (Dijkstra graph routing avoiding submerged red streets, 3D map emerald route overlay)
+- [x] Township-specific safe destinations, nearest reachable walking route, explicit failures, and violet route endpoint markers
+- [x] Click-to-pin origin and safe destination along road segments, alongside dropdown selection
 
 ## Wrap-up
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)

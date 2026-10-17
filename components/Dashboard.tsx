@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import AddTownshipModal from "@/components/AddTownshipModal";
 import MobileLinksModal from "@/components/MobileLinksModal";
 import TownshipMap from "@/components/TownshipMap";
+import EvacuationPanel from "@/components/EvacuationPanel";
 import type { Area, Streets } from "@/lib/area";
 import { STATUS_COLOR } from "@/lib/colors";
 import { applyInterventions, recommendInterventions, replayStorm } from "@/lib/engine/plan";
-import { findSafeRoute, type RouteResult } from "@/lib/engine/route";
+import { findSafeRoute, type RoadPoint, type RoadPosition, type RouteDestination, type RouteResult } from "@/lib/engine/route";
 import { STORM_MINUTES } from "@/lib/engine/storm";
 import type { Drain, DrainStatus, InterventionKind, PlanIntervention, Status } from "@/lib/engine/types";
 import { supabase } from "@/lib/supabase";
@@ -79,11 +80,46 @@ function DashboardView({
   const [mobileModalOpen, setMobileModalOpen] = useState(false);
 
   // Safe Routes (ROUTE-1) state
-  const [startStreetId, setStartStreetId] = useState<string>(() => {
-    const d08Street = currentStreets.features.find((f) => f.properties.drain_id === "D08");
-    return d08Street?.properties.id || currentStreets.features[0]?.properties.id || "";
+  const [startStreetId, setStartStreetId] = useState(currentStreets.features[0]?.properties.id ?? "");
+  const [destinationId, setDestinationId] = useState<string | null>(null);
+  const [originPosition, setOriginPosition] = useState<RoadPosition>();
+  const [routePickMode, setRoutePickMode] = useState<"origin" | "destination" | null>(null);
+  const [routePickMessage, setRoutePickMessage] = useState("");
+  const [destinations, setDestinations] = useState<RouteDestination[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored: unknown = JSON.parse(localStorage.getItem(`hydrotwin_destinations_${currentArea.slug}`) ?? "[]");
+      return Array.isArray(stored) ? stored.filter((d): d is RouteDestination =>
+        typeof d?.id === "string" && typeof d?.name === "string" && typeof d?.street_id === "string" && d?.kind === "demo") : [];
+    } catch { return []; }
   });
-  const [destDrainId, setDestDrainId] = useState<string>("D10"); // D10 is high ground (7m DEM)
+  const [destinationSaveError, setDestinationSaveError] = useState(false);
+  const updateDestinations = (next: RouteDestination[]) => {
+    setDestinations(next);
+    setDestinationId(null);
+    try {
+      localStorage.setItem(`hydrotwin_destinations_${currentArea.slug}`, JSON.stringify(next));
+      setDestinationSaveError(false);
+    } catch { setDestinationSaveError(true); }
+  };
+  const pickRoutePoint = (point: RoadPoint | null) => {
+    if (!point) {
+      setRoutePickMessage("No road near that click. Click closer to a mapped road.");
+      return;
+    }
+    if (routePickMode === "origin") {
+      setStartStreetId(point.street_id);
+      setOriginPosition(point.position);
+      setRoutePickMessage("Starting pin placed on the road.");
+    } else {
+      const id = crypto.randomUUID();
+      const street = currentStreets.features.find((s) => s.properties.id === point.street_id);
+      updateDestinations([...destinations, { id, ...point, name: `Demo pin · ${street?.properties.name || point.street_id}`, kind: "demo" }]);
+      setDestinationId(id);
+      setRoutePickMessage("Safe destination pin added and selected.");
+    }
+    setRoutePickMode(null);
+  };
 
   // Plan Mode state
   const [interventions, setInterventions] = useState<PlanIntervention[]>([]);
@@ -198,26 +234,15 @@ function DashboardView({
   const safeRouteResult: RouteResult | null = useMemo(() => {
     if (mode !== "route") return null;
 
-    const startFeature = currentStreets.features.find((f) => f.properties.id === startStreetId);
-    if (!startFeature || !startFeature.geometry.coordinates.length) return null;
-
-    const startCoord = startFeature.geometry.coordinates[0];
-    const targetDrain = currentDrains.find((d) => d.id === destDrainId) || currentDrains[0];
-    const destCoord: [number, number] = [targetDrain.lng, targetDrain.lat];
-
-    const blocked = new Set<string>();
-    for (const [drainId, st] of Object.entries(activeStatuses)) {
-      if (st.status === "red") blocked.add(drainId);
-    }
-
     return findSafeRoute(
       currentStreets.features,
-      startCoord,
-      destCoord,
-      `${targetDrain.name} (High Ground Shelter · ${targetDrain.elevation_m}m DEM)`,
-      blocked,
+      startStreetId,
+      destinations,
+      Object.fromEntries(Object.entries(liveSource === "cloud" ? cloudStatuses : activeStatuses).map(([id, st]) => [id, st.status])),
+      destinationId,
+      originPosition,
     );
-  }, [mode, startStreetId, destDrainId, currentStreets, currentDrains, activeStatuses]);
+  }, [mode, startStreetId, destinations, destinationId, originPosition, currentStreets, activeStatuses, liveSource, cloudStatuses]);
 
   const streetCounts = useMemo(() => {
     const counts: Record<Status, number> = { green: 0, amber: 0, red: 0 };
@@ -313,6 +338,9 @@ function DashboardView({
         statuses={activeStatuses}
         interventions={activeInterventions}
         safeRoute={mode === "route" ? safeRouteResult?.coordinates : null}
+        routeOrigin={mode === "route" ? safeRouteResult?.origin : null}
+        routeDestination={mode === "route" ? safeRouteResult?.destination : null}
+        onRoutePick={mode === "route" && routePickMode ? pickRoutePoint : undefined}
         onDrainClick={(drainId) => {
           setSelectedDrainId(drainId);
           if (mode !== "plan") setMode("plan");
@@ -710,98 +738,20 @@ function DashboardView({
             </section>
           </div>
         ) : mode === "route" ? (
-          /* ================= SAFE ROUTES (ROUTE-1) VIEW ================= */
-          <div className="flex flex-col gap-4">
-            <section className="rounded-xl border border-stone-200 bg-stone-50/60 p-4">
-              <div className="flex items-center justify-between pb-2 border-b border-stone-200">
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-700">Evacuation Route Finder</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                  Dijkstra Dynamic
-                </span>
-              </div>
-              <p className="text-xs text-stone-600 mt-2">
-                Calculates the shortest safe egress route on the road network, automatically diverting around streets submerged under red floodwater.
-              </p>
-
-              {/* Start street dropdown */}
-              <div className="mt-3 space-y-1">
-                <label className="text-xs font-semibold text-stone-700">Evacuation Starting Point</label>
-                <select
-                  value={startStreetId}
-                  onChange={(e) => setStartStreetId(e.target.value)}
-                  className="w-full text-xs font-medium rounded-lg border border-stone-300 bg-white p-2 text-stone-900"
-                >
-                  {currentStreets.features.map((f) => {
-                    const drainSt = activeStatuses[f.properties.drain_id]?.status || "green";
-                    return (
-                      <option key={f.properties.id} value={f.properties.id}>
-                        {f.properties.name || "Residential Road"} ({f.properties.id}) · Zone {f.properties.drain_id} {drainSt === "red" ? "⚠️ FLOODED" : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              {/* Destination Safe Point */}
-              <div className="mt-3 space-y-1">
-                <label className="text-xs font-semibold text-stone-700">Safe Haven Destination</label>
-                <select
-                  value={destDrainId}
-                  onChange={(e) => setDestDrainId(e.target.value)}
-                  className="w-full text-xs font-medium rounded-lg border border-stone-300 bg-white p-2 text-stone-900"
-                >
-                  {currentDrains.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} · Elevation {d.elevation_m}m DEM {d.elevation_m >= 6 ? "🌟 Safe High Ground" : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </section>
-
-            {/* Route Outcome Card */}
-            {safeRouteResult && (
-              <section className={`rounded-xl border p-4 ${safeRouteResult.found ? "bg-emerald-50/60 border-emerald-300" : "bg-rose-50/60 border-rose-300"}`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-wider text-stone-600">Route Status</span>
-                  <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full ${safeRouteResult.found ? "bg-emerald-600 text-white" : "bg-rose-600 text-white"}`}>
-                    {safeRouteResult.found ? "Clear Route Found" : "All Roads Submerged"}
-                  </span>
-                </div>
-
-                {safeRouteResult.found ? (
-                  <div className="mt-2 space-y-2">
-                    <div className="text-xl font-bold font-mono text-emerald-800">
-                      {safeRouteResult.distance_m} m
-                      <span className="text-xs font-normal text-stone-500 ml-2">
-                        (~{Math.ceil(safeRouteResult.distance_m / 70)} min walk / ~{Math.ceil(safeRouteResult.distance_m / 400)} min drive)
-                      </span>
-                    </div>
-
-                    <div className="text-xs text-stone-700 space-y-1 pt-2 border-t border-emerald-200/60">
-                      <div className="flex justify-between">
-                        <span className="text-stone-500">Destination:</span>
-                        <span className="font-semibold text-stone-900">{safeRouteResult.destination_name}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-stone-500">Submerged Streets Bypassed:</span>
-                        <span className="font-semibold text-emerald-700">{safeRouteResult.blocked_streets_avoided} segments avoided</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-stone-500">Map Visualization:</span>
-                        <span className="font-semibold text-violet-700">Violet line on 3D Map</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="mt-2 text-xs text-rose-700 space-y-1">
-                    <p className="font-semibold">⚠️ All immediate egress routes are cut off by flood water.</p>
-                    <p>ACTION: Move immediately to the upper floor or rooftop. Security response teams have been dispatched.</p>
-                  </div>
-                )}
-              </section>
-            )}
-          </div>
+          <EvacuationPanel
+            streets={currentStreets.features}
+            startStreetId={startStreetId}
+            onStartChange={(id) => { setStartStreetId(id); setOriginPosition(undefined); setRoutePickMessage(""); }}
+            destinations={destinations}
+            onDestinationsChange={updateDestinations}
+            selectedDestinationId={destinationId}
+            onDestinationChange={setDestinationId}
+            result={safeRouteResult}
+            saveError={destinationSaveError}
+            pickMode={routePickMode}
+            onPickModeChange={(value) => { setRoutePickMode(value); setRoutePickMessage(""); }}
+            pickMessage={routePickMessage}
+          />
         ) : (
           /* ================= LIVE MODE VIEW ================= */
           <>

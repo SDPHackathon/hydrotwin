@@ -37,6 +37,8 @@ We have no access to real drain sensors, so drains are **simulated zones** of re
 
 ## Data, licences and AI use
 
+Safe Routes uses user-designated safe destinations saved per township on this device. Configure a destination street endpoint in Safe Routes, then use automatic nearest-reachable routing or select a destination. These points are unverified for real evacuation. Routes use current simulated street statuses, permit amber roads with a warning, and exclude red roads and roads with unknown status; they do not forecast conditions during travel.
+
 - Third-party software and data: [`docs/third-party.md`](docs/third-party.md)
 - AI disclosure (T&C cl. 13): [`docs/ai-use-log.md`](docs/ai-use-log.md)
 
