@@ -35,7 +35,7 @@ The names here are the names in code, in the database and in the engine. Change 
 | `guard_tasks` | one live task per resident — opened at red for vulnerable residents, or by *I need help*; `open → on_the_way → done` | risk engine (open), guards (accept, resolve) | guards + the resident who called (Realtime) |
 | `plan_scenarios` | Plan-mode changes + results | plan page | everyone |
 
-RLS is on for every table. Clients only read; every write goes through the server with the service role, except a guard accepting or closing a task.
+RLS is on for every table. Clients only read; every write goes through the server with the service role, except a guard accepting or closing a task. The server's key is `SUPABASE_SERVICE_ROLE_KEY` (`.env.local`, server only); the demo-time public read/write policies are removed by `20261018234500_lock_public_writes.sql`.
 
 ## Call for help — `lib/engine/help.ts`
 

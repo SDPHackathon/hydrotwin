@@ -46,6 +46,8 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [ ] Azim's phone on the laptop's Wi-Fi: Add to Home Screen, Start shift beep, full loop phone ↔ phone
 
 ## Wrap-up
+- [x] Cloud: migrations `20261016…` + `20261018…_help_loop` applied (Danish, 18 Oct) · setup guide sent (Azim)
+- [ ] Cloud: apply `20261018234500_lock_public_writes.sql` (SQL Editor) + `SUPABASE_SERVICE_ROLE_KEY` on the demo laptop → test Cloud Phone Sync
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)
 - [ ] 22 Oct: full run-through · README final · AI-use log + third-party list complete · repo public
 - [ ] 23 Oct: Danish submits
