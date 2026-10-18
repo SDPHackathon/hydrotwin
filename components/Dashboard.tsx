@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import "./Dashboard.css";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AddTownshipModal from "@/components/AddTownshipModal";
 import MobileLinksModal from "@/components/MobileLinksModal";
 import TownshipMap from "@/components/TownshipMap";
+import MapModeNavigation from "@/components/MapModeNavigation";
 import EvacuationPanel from "@/components/EvacuationPanel";
 import DevelopmentPanel from "@/components/DevelopmentPanel";
 import { developmentError, evaluateDevelopment, newDevelopment, DEVELOPMENT_LABELS, type DevelopmentStage } from "@/lib/engine/development";
@@ -72,6 +74,27 @@ function DashboardView({
 }: DashboardViewProps) {
   // Mode: "live" (Realtime / local simulation), "plan" (Plan mode civil fixes), or "route" (Evacuation Safe Routes)
   const [mode, setMode] = useState<"live" | "plan" | "route">("live");
+  const [modePhase, setModePhase] = useState<"idle" | "leaving" | "entering">("idle");
+  const modeTimers = useRef<number[]>([]);
+
+  useEffect(() => () => modeTimers.current.forEach(window.clearTimeout), []);
+
+  const changeMode = (next: typeof mode) => {
+    if (next === mode && modePhase === "idle") return;
+    modeTimers.current.forEach(window.clearTimeout);
+    modeTimers.current = [];
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setMode(next);
+      setModePhase("idle");
+      return;
+    }
+    setModePhase("leaving");
+    modeTimers.current.push(window.setTimeout(() => {
+      setMode(next);
+      setModePhase("entering");
+      modeTimers.current.push(window.setTimeout(() => setModePhase("idle"), 360));
+    }, 180));
+  };
 
   // Live data source: "local" (in-browser simulation) or "cloud" (Supabase / Phone /control sync)
   const [liveSource, setLiveSource] = useState<"local" | "cloud">("local");
@@ -339,6 +362,8 @@ function DashboardView({
 
   return (
     <div className="grid h-dvh overflow-hidden grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_390px] lg:grid-rows-[minmax(0,1fr)]">
+      <div className="relative min-h-0 min-w-0">
+      <div className="dashboard-mode-surface h-full w-full" data-mode-phase={modePhase}>
       <TownshipMap
         area={currentArea}
         drains={activeSimulationDrains}
@@ -359,11 +384,14 @@ function DashboardView({
         onDrainClick={(drainId) => {
           if (developmentActive) { setDevelopment(prev => ({ ...prev, drain_id: drainId })); return; }
           setSelectedDrainId(drainId);
-          if (mode !== "plan") setMode("plan");
+          if (mode !== "plan") changeMode("plan");
         }}
       />
+      </div>
+      <MapModeNavigation mode={mode} onChange={changeMode} />
+      </div>
 
-      <aside className="flex max-h-[50dvh] flex-col gap-5 overflow-y-auto border-stone-200 bg-white p-5 lg:max-h-none lg:border-l">
+      <aside className="dashboard-mode-surface flex max-h-[50dvh] flex-col gap-5 overflow-y-auto border-stone-200 bg-white p-5 lg:max-h-none lg:border-l" data-mode-phase={modePhase}>
         {/* Top Header */}
         <header className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
@@ -428,36 +456,6 @@ function DashboardView({
             </div>
           </div>
 
-          {/* Mode Switcher Tabs */}
-          <div className="flex rounded-lg border border-stone-200 p-1 bg-stone-100 text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => setMode("live")}
-              className={`flex-1 rounded-md py-1.5 transition ${
-                mode === "live" ? "bg-white text-stone-900 shadow-xs" : "text-stone-500 hover:text-stone-900"
-              }`}
-            >
-              Live Warning
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("plan")}
-              className={`flex-1 rounded-md py-1.5 transition ${
-                mode === "plan" ? "bg-white text-stone-900 shadow-xs" : "text-stone-500 hover:text-stone-900"
-              }`}
-            >
-              Plan Mode
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("route")}
-              className={`flex-1 rounded-md py-1.5 transition ${
-                mode === "route" ? "bg-white text-stone-900 shadow-xs" : "text-stone-500 hover:text-stone-900"
-              }`}
-            >
-              Safe Routes
-            </button>
-          </div>
         </header>
 
         {mode === "plan" ? (

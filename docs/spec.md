@@ -56,9 +56,9 @@ Detailed building / road layout editing and zoning approvals, traffic simulation
 
 ## Development screening (18 Oct scope extension)
 
-Plan mode offers **Improve township** and **New development**. For a development, draw one site inside the loaded township, select housing/commercial, manually assign its receiving drain and an existing access road, and enter catchment area and existing/proposed paving. Compare existing conditions, developed conditions, and development with one mitigation under the identical synthetic storm. Save proposals locally and compare up to two under current township data.
+Plan mode offers **Improve township** and **New development**. For a development, draw one site inside the loaded township and select housing/commercial. Finishing the outline suggests the nearest road to its outline centre and that road's existing Live Warning drain zone; both can be overridden manually. Zone size is estimated from its mapped street extent, so there is no manual catchment-area input. Set before/after paving and compare existing conditions, developed conditions, and development with one mitigation under the identical synthetic storm. Save proposals locally and compare up to two under current township data.
 
-Results describe the receiving zone's existing streets and the selected access road. They do not establish parcel suitability, predict water inside the drawn polygon, create new roads, or model water moving between drain zones. The boundary is a proposal outline. Map previews show each zone at its own peak, not a simultaneous flood snapshot. Catchment size, runoff coefficients and mitigation effects are explicit demo assumptions. Green space is represented through land cover only.
+Results describe the receiving zone's existing streets and the selected access road. They do not establish parcel suitability, predict water inside the drawn polygon, create new roads, or model water moving between drain zones. The boundary is a proposal outline. Map previews show each zone at its own peak, not a simultaneous flood snapshot. The street-zone footprint estimate, runoff coefficients and mitigation effects are explicit demo assumptions. Green space is represented through land cover only.
 
 ## Simplifications we state out loud
 

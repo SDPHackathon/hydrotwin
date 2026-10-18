@@ -480,5 +480,5 @@ export default function TownshipMap({
     m.getSource<GeoJSONSource>("flood-zones")?.updateData({ update });
   }, [ready, statuses, streets, drains]);
 
-  return <div className="relative h-full min-h-0 w-full"><div ref={container} className="h-full w-full" />{siteCaption && <div className="pointer-events-none absolute left-14 right-3 top-3 max-w-lg rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs text-stone-800 shadow-sm"><strong>Development scenario</strong><br />{siteCaption}<br /><span className="text-stone-500">Indigo: proposed site · magenta: selected access road. Zone street depths only.</span></div>}</div>;
+  return <div className="relative h-full min-h-0 w-full"><div ref={container} className="h-full w-full" />{siteCaption && <div className="pointer-events-none absolute bottom-16 left-3 right-3 max-w-lg rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs text-stone-800 shadow-sm"><strong>Development scenario</strong><br />{siteCaption}<br /><span className="text-stone-500">Indigo: proposed site · magenta: selected access road. Zone street depths only.</span></div>}</div>;
 }

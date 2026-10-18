@@ -1,0 +1,53 @@
+.map-mode-shell {
+  position: absolute;
+  z-index: 20;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 132px;
+  height: 56px;
+  border: 1px solid rgb(214 211 209 / 92%);
+  border-radius: 12px;
+  background: rgb(255 255 255 / 96%);
+  color: #1c1917;
+  box-shadow: 0 12px 40px rgb(28 25 23 / 14%);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+  transition: width 580ms cubic-bezier(.22, 1, .36, 1), height 580ms cubic-bezier(.22, 1, .36, 1), box-shadow 400ms;
+}
+.map-mode-shell[data-open="true"] { width: min(640px, calc(100% - 112px)); height: 270px; box-shadow: 0 22px 65px rgb(28 25 23 / 20%); }
+.map-mode-shell[data-open="false"] { cursor: pointer; }
+.map-mode-header { height: 56px; display: flex; justify-content: space-between; align-items: center; padding: 0 18px; }
+.map-mode-mark { flex-shrink: 0; width: 21px; height: 24px; }
+.map-mode-toggle { position: relative; flex-shrink: 0; width: 30px; height: 36px; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.map-mode-toggle span { position: absolute; width: 20px; height: 1px; background: currentColor; left: 5px; transition: transform 350ms ease, top 350ms ease; }
+.map-mode-toggle span:first-child { top: 14px; }
+.map-mode-toggle span:last-child { top: 21px; }
+.map-mode-shell[data-open="true"] .map-mode-toggle span:first-child { top: 18px; transform: rotate(45deg); }
+.map-mode-shell[data-open="true"] .map-mode-toggle span:last-child { top: 18px; transform: rotate(-45deg); }
+.map-mode-content { display: grid; grid-template-columns: 1fr 1.15fr; align-items: center; gap: 20px; height: 188px; margin: 0 20px 20px; visibility: hidden; transition: visibility 0s 400ms; }
+.map-mode-shell[data-open="true"] .map-mode-content { visibility: visible; transition-delay: 0s; }
+.map-mode-links { display: flex; flex-direction: column; align-items: stretch; gap: 5px; min-width: 0; }
+.map-mode-link { display: flex; align-items: center; min-height: 43px; text-align: left; white-space: nowrap; font: 400 clamp(20px, 2.8vw, 30px)/1.35 Georgia, 'Times New Roman', serif; letter-spacing: -.035em; color: #1c1917; background: transparent; border: 0; padding: 0; opacity: 0; transform: translateY(14px); transition: opacity 320ms ease, transform 450ms cubic-bezier(.22, 1, .36, 1); }
+.map-mode-shell[data-open="true"] .map-mode-link { opacity: 1; transform: translateY(0); }
+.map-mode-dash { display: inline-block; max-width: 0; opacity: 0; transform: translateX(-10px); overflow: hidden; transition: max-width 350ms ease, margin-right 350ms ease, opacity 300ms ease, transform 350ms ease; }
+.map-mode-link:hover .map-mode-dash, .map-mode-link:focus-visible .map-mode-dash { max-width: 30px; margin-right: 8px; opacity: 1; transform: translateX(0); }
+.map-mode-current { width: 4px; height: 4px; margin-left: 9px; border-radius: 50%; background: #059669; opacity: 0; flex-shrink: 0; }
+.map-mode-link[aria-pressed="true"] .map-mode-current { opacity: 1; }
+.map-mode-toggle:focus-visible, .map-mode-link:focus-visible { outline: 2px solid #10b981; outline-offset: 4px; border-radius: 3px; }
+.map-mode-preview { height: 174px; position: relative; min-width: 0; overflow: hidden; border-radius: 5px; background: #e7e5e4; opacity: 0; transform: translateY(12px); transition: opacity 450ms ease, transform 500ms ease; }
+.map-mode-shell[data-open="true"] .map-mode-preview { opacity: 1; transform: translateY(0); transition-delay: 180ms; }
+.map-mode-image { object-fit: cover; opacity: 0; transform: scale(1.06); transition: opacity 500ms ease, transform 900ms cubic-bezier(.22, 1, .36, 1); }
+.map-mode-image[data-active="true"] { opacity: 1; transform: scale(1); }
+@media (max-width: 600px) {
+  .map-mode-shell { top: 12px; }
+  .map-mode-shell[data-open="true"] { width: calc(100% - 24px); height: 238px; }
+  .map-mode-content { grid-template-columns: 1.2fr 1fr; margin: 0 16px 16px; gap: 12px; height: 160px; }
+  .map-mode-link { font-size: clamp(18px, 4.8vw, 25px); min-height: 42px; }
+  .map-mode-preview { height: 145px; }
+  .map-mode-link:hover .map-mode-dash, .map-mode-link:focus-visible .map-mode-dash { max-width: 18px; margin-right: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .map-mode-shell, .map-mode-content, .map-mode-toggle span, .map-mode-link, .map-mode-dash, .map-mode-preview, .map-mode-image { transition: none !important; transform: none; }
+  .map-mode-shell { transform: translateX(-50%); }
+}

@@ -1,0 +1,15 @@
+.dashboard-mode-surface {
+  filter: blur(0);
+  opacity: 1;
+  transition: filter 360ms ease, opacity 360ms ease;
+}
+
+.dashboard-mode-surface[data-mode-phase="leaving"] {
+  filter: blur(5px);
+  opacity: 0.6;
+  transition-duration: 180ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-mode-surface { transition: none; }
+}

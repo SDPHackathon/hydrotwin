@@ -46,13 +46,17 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [ ] Azim's phone on the laptop's Wi-Fi: Add to Home Screen, Start shift beep, full loop phone ↔ phone
 
 ## Development screening extension (18 Oct) ✅
-- [x] Plan mode: new development workflow alongside existing township upgrades; draw/undo/finish a site boundary, choose housing/commercial, receiving drain and access road, edit catchment and land cover
+- [x] Plan mode: new development workflow alongside existing township upgrades; draw/undo/finish a site boundary, choose housing/commercial, automatic nearest-road / Live zone suggestions with manual overrides, before/after land cover
 - [x] Pure engine: explicit area-weighted runoff assumptions, three identical-storm replays, receiving-zone street impacts and access-road screening; no plot-level or downstream prediction
 - [x] Map previews for existing/developed/mitigated independent zone peaks, proposed-site boundary and access-road overlay
 - [x] Versioned browser storage, load proposals, compare two at any scenario stage; existing upgrade saves preserved
-- [x] Validation: 41 engine tests (9 new development tests), lint and production build pass; browser verified drawing, presets, scenario results/map, two saved proposals, comparison and persistence after reload; no browser console errors
+- [x] Validation: 43 engine tests (11 development tests), lint and production build pass; browser verified drawing, presets, scenario results/map, saved comparisons and persistence; automatic selection, manual overrides and restore suggestions; no browser console errors
+- [x] Development v2: remove manual catchment area, estimate zone footprint from the existing street cluster; legacy development saves remain readable and recalculate with current assumptions
 
 ## Submission wrap-up
+
+- [x] 18 Oct: map-centered expanding mode navigation replaces sidebar tabs; animated label entrance, hover/focus dashes and image crossfades, keyboard selection/Escape, reduced-motion support; licensed replaceable local stock images
+- [x] 19 Oct: mode switches blur the map and panel before changing content, then sharpen; styles imported directly by Dashboard to fix stale development CSS; captured intermediate blur for all three top-center tabs on localhost:3000 and verified return to clear
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)
 - [ ] 22 Oct: full run-through · README final · AI-use log + third-party list complete · repo public
 - [ ] 23 Oct: Danish submits

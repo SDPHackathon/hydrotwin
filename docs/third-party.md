@@ -22,7 +22,17 @@ SDP Hackathon T&C cl. 14: everything we use must be lawfully obtained and licens
 | OpenStreetMap Nominatim | Geocoding search for dynamic township addition | ODbL 1.0 / Nominatim Usage Policy (max 1 req/sec, custom User-Agent) | "© OpenStreetMap contributors" |
 | Storm | rainfall pattern | synthetic, made by us (`lib/engine/storm.ts`) — replace with a recorded storm and add its source here | — |
 
-## Hosted services
+## Navigation preview photographs (temporary stock assets)
+
+Local files in `public/images/navigation/`, replaceable without changing the navigation component. Illustrative stock photographs, not township data, from Unsplash's public image CDN under the [Unsplash License](https://unsplash.com/license).
+
+| File | Photographer / source | Licence |
+|---|---|---|
+| `live.jpg` | [Clouds · photo-1534088568595-a066f410bcda](https://images.unsplash.com/photo-1534088568595-a066f410bcda) | Unsplash License |
+| `plan.jpg` | [City street · photo-1449824913935-59a10b8d2000](https://images.unsplash.com/photo-1449824913935-59a10b8d2000) | Unsplash License |
+| `route.jpg` | [Desert road · photo-1500530855697-b586d89ba3ee](https://images.unsplash.com/photo-1500530855697-b586d89ba3ee) | Unsplash License |
+
+## Hosted service terms
 
 | Name | Used for | Terms |
 |---|---|---|

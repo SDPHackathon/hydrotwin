@@ -5,7 +5,7 @@ import type { Area, Streets } from "@/lib/area";
 import type { Drain } from "@/lib/engine/types";
 import {
   boundaryError, DEVELOPMENT_LABELS, DEVELOPMENT_MODEL, DEVELOPMENT_STAGES,
-  developmentError, evaluateDevelopment, parseDevelopments, siteAreaHa,
+  developmentError, evaluateDevelopment, parseDevelopments, siteAreaHa, suggestDevelopmentConnections,
   type DevelopmentDraft, type DevelopmentResult, type DevelopmentStage, type SavedDevelopment,
 } from "@/lib/engine/development";
 
@@ -58,6 +58,11 @@ export default function DevelopmentPanel({ area, drains, streets, draft, onChang
     return { saved: s, error: invalid, result: invalid ? null : evaluateDevelopment(s.draft, drains, streets.features, area.bbox) };
   }), [saved, compareIds, drains, streets, area.bbox]);
   const geometryError = boundaryError(draft.boundary);
+  const suggestion = useMemo(() => suggestDevelopmentConnections(draft.boundary, streets.features, drains), [draft.boundary, streets, drains]);
+  const applySuggestions = () => {
+    if (suggestion) update(suggestion);
+    else setMessage("No mapped road with a known drain zone could be suggested. Choose manually.");
+  };
   const accessZone = streets.features.find(s => s.properties.id === draft.access_street_id)?.properties.drain_id;
 
   return <div className="flex flex-col gap-4 text-stone-800">
@@ -76,7 +81,7 @@ export default function DevelopmentPanel({ area, drains, streets, draft, onChang
         <button className={button} onClick={() => { update({ boundary: [] }); onDrawing(true); }}>Draw new site</button>
         {drawing && <>
           <button className={button} disabled={!draft.boundary.length} onClick={() => update({ boundary: draft.boundary.slice(0, -1) })}>Undo corner</button>
-          <button className={`${button} bg-indigo-600 text-white`} disabled={!!geometryError} onClick={() => onDrawing(false)}>Finish boundary</button>
+          <button className={`${button} bg-indigo-600 text-white`} disabled={!!geometryError} onClick={() => { applySuggestions(); onDrawing(false); }}>Finish boundary</button>
           <button className={button} onClick={() => { update({ boundary: [] }); onDrawing(false); }}>Cancel drawing</button>
         </>}
       </div>
@@ -85,16 +90,18 @@ export default function DevelopmentPanel({ area, drains, streets, draft, onChang
     <section className="space-y-3 rounded-xl border border-stone-200 p-3">
       <h3 className="text-sm font-semibold">2. Set drainage and land cover</h3>
       <label className="block text-xs">Receiving drain zone<select className={`${field} mt-1`} value={draft.drain_id} onChange={e => update({ drain_id: e.target.value })}>{drains.map(d => <option key={d.id} value={d.id}>{d.id} · {d.name}</option>)}</select></label>
-      <p className="text-xs text-stone-500">Assign the receiving zone manually. The map does not establish drainage connections.</p>
-      <label className="block text-xs">Assumed total catchment area (ha)<input className={`${field} mt-1`} type="number" min="0.01" max="100000" step="any" value={Number.isFinite(draft.catchment_ha) ? draft.catchment_ha : ""} onChange={e => update({ catchment_ha: e.target.value === "" ? NaN : Number(e.target.value) })} /></label>
-      <p className="text-xs text-stone-500">Includes the site. Default 100 ha is an assumption, not a measured catchment.</p>
+      <p className="text-xs text-stone-500">Uses the same street groups as Live Warning. Finishing the boundary suggests the zone of the road nearest the site’s outline centre. You can change it here or click a drain on the map.</p>
+      <button className={button} disabled={!suggestion || drawing} onClick={applySuggestions}>Use suggested zone and road</button>
+      {suggestion && !drawing && <p className="text-xs text-stone-500">Suggested zone: {suggestion.drain_id}. Your selected zone: {draft.drain_id}. Proximity is an estimate of the connection.</p>}
       {(["existing_paved_pct", "proposed_paved_pct"] as const).map((key, i) => <label key={key} className="block text-xs">
-        {i === 0 ? "Existing" : "Proposed"} buildings and paving: <strong>{draft[key]}%</strong> · permeable: {100 - draft[key]}%
+        {i === 0 ? "Before construction" : "After construction"} buildings and paving: <strong>{draft[key]}%</strong> · permeable: {100 - draft[key]}%
         <input className="mt-2 w-full accent-indigo-600" type="range" min={0} max={100} value={draft[key]} onChange={e => update({ [key]: Number(e.target.value) })} />
       </label>)}
+      <p className="text-xs text-stone-500">Both percentages apply only to your drawn site. Before is the estimated current cover; after is the planned total cover.</p>
       <label className="block text-xs">Proposed access road<select className={`${field} mt-1`} value={draft.access_street_id} onChange={e => update({ access_street_id: e.target.value })}>
         <option value="">Choose an existing road</option>{streets.features.map(s => <option key={s.properties.id} value={s.properties.id}>{s.properties.name || s.properties.id} · {s.properties.drain_id}</option>)}
       </select></label>
+      <p className="text-xs text-stone-500">The nearest mapped road is suggested automatically. You can choose a different access road.</p>
       {accessZone && accessZone !== draft.drain_id && <p className="text-xs text-amber-800">Access is in {accessZone}; development changes only {draft.drain_id}. Cross-zone water movement is not modelled.</p>}
       <label className="block text-xs">Mitigation for the receiving zone<select className={`${field} mt-1`} value={draft.mitigation} onChange={e => update({ mitigation: e.target.value as DevelopmentDraft["mitigation"] })}>
         <option value="none">None</option><option value="bigger_drain">Bigger drain · assumed outflow ×1.5</option><option value="retention_pond">Retention pond · assumed inflow ×0.6</option>
@@ -118,7 +125,7 @@ export default function DevelopmentPanel({ area, drains, streets, draft, onChang
         <label className="block text-xs">Map preview<select className={`${field} mt-1`} value={stage} onChange={e => onStage(e.target.value as DevelopmentStage)}>{DEVELOPMENT_STAGES.map(s => <option key={s} value={s}>{DEVELOPMENT_LABELS[s]}</option>)}</select></label>
         <p className="text-xs text-stone-600">Map shows each zone at its own peak, not one instant. Access checks this road only, not a complete evacuation route.</p>
       </>}
-      <details className="text-xs text-stone-600"><summary className="cursor-pointer font-medium">Model assumptions and limits</summary><p className="mt-2">Demo runoff coefficients: permeable ground 0.2, paving 0.9. The rest of the catchment is assumed to share the site’s existing land-cover mix. Development changes only the selected zone. Existing streets represent zone overflow; this is not a plot flood map or a construction suitability assessment. Storm: synthetic 180 minutes plus 30 minutes drainage. Mitigation uses the existing demo multipliers.</p></details>
+      <details className="text-xs text-stone-600"><summary className="cursor-pointer font-medium">Model assumptions and limits</summary><p className="mt-2">The zone’s size is estimated from the extent of its mapped streets with a 50 m margin on each side. The site’s share is capped at 100% of that estimate. {result ? `Selected zone estimate: ${result.zone_area_ha.toFixed(2)} ha. ` : ""}This is a demo footprint, not a measured drainage area. Demo runoff coefficients: permeable ground 0.2, paving 0.9; the rest of the zone shares the site’s existing mix. Development changes only the selected zone. Existing streets represent zone overflow, not flooding inside individual plots. Storm: synthetic 180 minutes plus 30 minutes drainage. Older saved proposals are recalculated with this model.</p></details>
     </section>
     <section className="space-y-3 rounded-xl border border-stone-200 p-3">
       <h3 className="text-sm font-semibold">4. Save and compare proposals</h3>

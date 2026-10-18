@@ -22,6 +22,8 @@ The township data is already in `public/data/bukit-raja/`; `npm run data` rebuil
 
 ## How it works
 
+Switch between Live Warning, Plan Mode and Safe Routes using the droplet/menu control centered above the map. It expands into mode links with stock preview photographs; hover or keyboard focus changes the preview. Escape or clicking outside closes it. Replace `public/images/navigation/live.jpg`, `plan.jpg` and `route.jpg` with your own images using the same filenames; update credits in `docs/third-party.md` and alt text in `components/MapModeNavigation.tsx` when replacing them.
+
 ```
 drain sensors (simulated) → risk engine → street status → map · resident alerts · guard check-list
 ```
@@ -48,9 +50,9 @@ measured and dashed (`lib/engine/help.ts`; rules in [`docs/data-contracts.md`](d
 
 ## What is simulated (and why)
 
-**Plan → New development:** draw a site, choose housing or commercial, assign its receiving drain and access road, and set assumed catchment area and existing/proposed paved cover. Compare existing, developed, and mitigated conditions; preview each on the map and save proposals to this browser. Select two saved proposals to compare their mitigated results under the same storm and current township data. Existing township-upgrade scenarios remain available under **Improve township**.
+**Plan → New development:** draw and finish a site, choose housing or commercial, and set before/after paved cover. The nearest mapped road and its Live Warning drain zone are suggested automatically; both can be changed manually. Compare existing, developed, and mitigated conditions; preview each on the map and save proposals to this browser. Select two saved proposals to compare any scenario stage under the same storm and current township data. Existing township-upgrade scenarios remain available under **Improve township**.
 
-Development screening changes only one simulated drain zone. Default catchment area (100 ha), runoff coefficients (permeable 0.2, paved 0.9), and mitigation multipliers are demo assumptions, not calibrated engineering inputs. The rest of the catchment is assumed to share the site's existing land-cover mix. The site outline is not a flood boundary: results describe existing streets in the receiving zone, not individual plots or downstream impacts. Map previews show separate zone peaks; the access check covers one selected road. This does not assess construction suitability.
+Development screening changes only one simulated drain zone. Zone area is estimated from its mapped street extent plus a 50 m margin on each side, not a measured watershed. Runoff coefficients (permeable 0.2, paved 0.9) and mitigation multipliers are demo assumptions. The rest of the zone is assumed to share the site's existing land-cover mix; site share is capped at 100%. The site outline is not a flood boundary: results describe existing streets in the receiving zone, not individual plots or downstream impacts. Map previews show separate zone peaks; the access check covers one selected road. This does not assess construction suitability. Older development proposals load and recalculate using the current model.
 
 We have no access to real drain sensors, so drains are **simulated zones** of real streets; each zone's **ground height is real**. The storm is a 3-hour design storm. Water is shown as overflow depth along a zone's streets, not a hydraulic flow model. In a real township, off-the-shelf drain-level sensors would call the same risk engine.
 
