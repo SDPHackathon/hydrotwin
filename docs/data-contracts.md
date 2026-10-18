@@ -82,6 +82,16 @@ Plan mode evaluates the current township against the existing synthetic storm. I
 
 ## Live data flow (Step B)
 
+### Development proposals (local only, model `development-v1`)
+
+`hydrotwin_developments_v1_<area.slug>` stores up to 30 `SavedDevelopment` records: `id`, `model`, `created_at`, `draft`, `results`. This is separate from existing upgrade scenarios; no database table, column, status rule or migration changes are needed. `lib/engine/development.ts` defines the shapes and validates saved input. Unsupported versions/corrupt entries are ignored. Comparisons and loaded proposals are recalculated against current township data; saved result snapshots are historical only.
+
+Draft: `name`, `kind` (housing/commercial), `boundary` (unclosed `[lng, lat][]`, 3–50 corners, simple polygon, minimum 0.01 ha, inside township extent), `drain_id`, `access_street_id`, `catchment_ha` (positive, at least site area, at most 100,000 ha), `existing_paved_pct` and `proposed_paved_pct` (0–100), `mitigation` (none/bigger_drain/retention_pond). Area uses a local equirectangular projection, not cadastral geometry. Housing/commercial supply editable proposed-paving presets (60%/85%); the kind itself does not change model physics.
+
+Assumptions: catchment defaults to **100 ha**, not measured. Demo runoff coefficient `C(p) = 0.2 + 0.7 * p/100` (permeable 0.2, paved 0.9). The unchanged remainder of the catchment is assumed to have the same initial cover as the site's existing mix. Receiving-zone `catchment_factor` is multiplied by `1 + (site_ha / catchment_ha) * (C(proposed) - C(existing)) / C(existing)`. Other drains are unchanged. No grading, drainage connectivity, downstream transfer, or plot-level flood depths are inferred.
+
+Three replays start at zero under the current synthetic storm (180 minutes plus 30 drainage, same inclusive tick range as existing Plan replay). Mitigation applies the existing engine's bigger-drain or pond multiplier after development; green space is counted only via paving percentage. `assess()` remains the sole authority for status. Results per stage: receiving-zone `deepest_cm`, `minutes_to_first_red` (null if none), `streets_flooded` (existing zone streets), `access_flooded` (selected road's own zone), and `peak_statuses` (each drain's independent peak, not one time instant). Access is a single-road screening check, not a connected evacuation route. Peaks on the map are labelled accordingly.
+
 ### Demo route destinations
 
 `hydrotwin_destinations_<area.slug>` in device localStorage contains `{ id, name, street_id, kind: "demo", position?: { segment_index, fraction } }[]`. Dropdown points use the first vertex of an existing street; map pins use a validated segment index and fraction (0–1). Clicks snap to a road within 24 screen pixels; distant clicks are rejected. Routing splits that segment at the anchor, including both pins on the same segment. Points are unverified as real evacuation locations. Empty lists require user configuration; no drain is implicitly a shelter. Existing saved points without `position` remain compatible. No database schema changes are required.

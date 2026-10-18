@@ -5,6 +5,8 @@ import AddTownshipModal from "@/components/AddTownshipModal";
 import MobileLinksModal from "@/components/MobileLinksModal";
 import TownshipMap from "@/components/TownshipMap";
 import EvacuationPanel from "@/components/EvacuationPanel";
+import DevelopmentPanel from "@/components/DevelopmentPanel";
+import { developmentError, evaluateDevelopment, newDevelopment, DEVELOPMENT_LABELS, type DevelopmentStage } from "@/lib/engine/development";
 import type { Area, Streets } from "@/lib/area";
 import { STATUS_COLOR } from "@/lib/colors";
 import { applyInterventions, recommendInterventions, replayStorm } from "@/lib/engine/plan";
@@ -122,6 +124,14 @@ function DashboardView({
   };
 
   // Plan Mode state
+  const [planMode, setPlanMode] = useState<"upgrades" | "development">("upgrades");
+  const [development, setDevelopment] = useState(() => newDevelopment(currentDrains[0]?.id ?? ""));
+  const [drawingSite, setDrawingSite] = useState(false);
+  const [developmentStage, setDevelopmentStage] = useState<DevelopmentStage>("proposed");
+  const developmentActive = mode === "plan" && planMode === "development";
+  const developmentValidation = developmentError(development, currentDrains, currentStreets.features, currentArea.bbox);
+  const developmentResult = useMemo(() => drawingSite || developmentValidation ? null : evaluateDevelopment(development, currentDrains, currentStreets.features, currentArea.bbox),
+    [drawingSite, developmentValidation, development, currentDrains, currentStreets, currentArea.bbox]);
   const [interventions, setInterventions] = useState<PlanIntervention[]>([]);
   const [selectedDrainId, setSelectedDrainId] = useState<string>(currentDrains[0]?.id || "D08");
   const [selectedKind, setSelectedKind] = useState<InterventionKind>("retention_pond");
@@ -328,20 +338,26 @@ function DashboardView({
   }, [mode, simulationScenario, interventions]);
 
   return (
-    <div className="grid h-dvh grid-rows-[1fr_auto] lg:grid-cols-[1fr_390px] lg:grid-rows-1">
+    <div className="grid h-dvh overflow-hidden grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_390px] lg:grid-rows-[minmax(0,1fr)]">
       <TownshipMap
         area={currentArea}
         drains={activeSimulationDrains}
         streets={currentStreets}
         buildings={currentBuildings}
         floodZones={currentFloodZones}
-        statuses={activeStatuses}
-        interventions={activeInterventions}
+        statuses={developmentActive ? developmentResult?.stages[developmentStage].peak_statuses ?? {} : activeStatuses}
+        interventions={developmentActive ? (developmentResult && developmentStage === "mitigated" && development.mitigation !== "none" ? [{ drain_id: development.drain_id, kind: development.mitigation }] : []) : activeInterventions}
+        siteBoundary={developmentActive ? development.boundary : undefined}
+        siteClosed={developmentActive && !drawingSite}
+        siteCaption={developmentActive ? (developmentResult ? `${DEVELOPMENT_LABELS[developmentStage]} · each zone at its own peak` : "Draw site and complete inputs · no scenario preview yet") : undefined}
+        siteAccessRoad={developmentActive ? development.access_street_id : undefined}
+        onSitePick={developmentActive && drawingSite ? (point) => setDevelopment(prev => prev.boundary.length >= 50 ? prev : { ...prev, boundary: [...prev.boundary, point] }) : undefined}
         safeRoute={mode === "route" ? safeRouteResult?.coordinates : null}
         routeOrigin={mode === "route" ? safeRouteResult?.origin : null}
         routeDestination={mode === "route" ? safeRouteResult?.destination : null}
         onRoutePick={mode === "route" && routePickMode ? pickRoutePoint : undefined}
         onDrainClick={(drainId) => {
+          if (developmentActive) { setDevelopment(prev => ({ ...prev, drain_id: drainId })); return; }
           setSelectedDrainId(drainId);
           if (mode !== "plan") setMode("plan");
         }}
@@ -445,6 +461,12 @@ function DashboardView({
         </header>
 
         {mode === "plan" ? (
+          <>
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-stone-100 p-1 text-xs">
+            <button className={`rounded-md px-2 py-2 ${planMode === "upgrades" ? "bg-white font-semibold shadow-sm" : "text-stone-600"}`} onClick={() => { setPlanMode("upgrades"); setDrawingSite(false); }}>Improve township</button>
+            <button className={`rounded-md px-2 py-2 ${planMode === "development" ? "bg-white font-semibold shadow-sm" : "text-stone-600"}`} onClick={() => setPlanMode("development")}>New development</button>
+          </div>
+          {planMode === "development" ? <DevelopmentPanel area={currentArea} drains={currentDrains} streets={currentStreets} draft={development} onChange={setDevelopment} drawing={drawingSite} onDrawing={setDrawingSite} result={developmentResult} error={developmentValidation} stage={developmentStage} onStage={setDevelopmentStage} /> : (
           /* ================= PLAN MODE VIEW ================= */
           <div className="flex flex-col gap-5">
             {/* Before vs After Impact Scorecard */}
@@ -737,6 +759,8 @@ function DashboardView({
               )}
             </section>
           </div>
+          )}
+          </>
         ) : mode === "route" ? (
           <EvacuationPanel
             streets={currentStreets.features}

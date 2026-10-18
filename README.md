@@ -48,6 +48,10 @@ measured and dashed (`lib/engine/help.ts`; rules in [`docs/data-contracts.md`](d
 
 ## What is simulated (and why)
 
+**Plan → New development:** draw a site, choose housing or commercial, assign its receiving drain and access road, and set assumed catchment area and existing/proposed paved cover. Compare existing, developed, and mitigated conditions; preview each on the map and save proposals to this browser. Select two saved proposals to compare their mitigated results under the same storm and current township data. Existing township-upgrade scenarios remain available under **Improve township**.
+
+Development screening changes only one simulated drain zone. Default catchment area (100 ha), runoff coefficients (permeable 0.2, paved 0.9), and mitigation multipliers are demo assumptions, not calibrated engineering inputs. The rest of the catchment is assumed to share the site's existing land-cover mix. The site outline is not a flood boundary: results describe existing streets in the receiving zone, not individual plots or downstream impacts. Map previews show separate zone peaks; the access check covers one selected road. This does not assess construction suitability.
+
 We have no access to real drain sensors, so drains are **simulated zones** of real streets; each zone's **ground height is real**. The storm is a 3-hour design storm. Water is shown as overflow depth along a zone's streets, not a hydraulic flow model. In a real township, off-the-shelf drain-level sensors would call the same risk engine.
 
 ## Data, licences and AI use

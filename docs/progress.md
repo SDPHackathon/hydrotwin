@@ -45,7 +45,14 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] Installable phone pages (manifests + icons) · README phone section (same Wi-Fi link, Add to Home Screen)
 - [ ] Azim's phone on the laptop's Wi-Fi: Add to Home Screen, Start shift beep, full loop phone ↔ phone
 
-## Wrap-up
+## Development screening extension (18 Oct) ✅
+- [x] Plan mode: new development workflow alongside existing township upgrades; draw/undo/finish a site boundary, choose housing/commercial, receiving drain and access road, edit catchment and land cover
+- [x] Pure engine: explicit area-weighted runoff assumptions, three identical-storm replays, receiving-zone street impacts and access-road screening; no plot-level or downstream prediction
+- [x] Map previews for existing/developed/mitigated independent zone peaks, proposed-site boundary and access-road overlay
+- [x] Versioned browser storage, load proposals, compare two at any scenario stage; existing upgrade saves preserved
+- [x] Validation: 41 engine tests (9 new development tests), lint and production build pass; browser verified drawing, presets, scenario results/map, two saved proposals, comparison and persistence after reload; no browser console errors
+
+## Submission wrap-up
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)
 - [ ] 22 Oct: full run-through · README final · AI-use log + third-party list complete · repo public
 - [ ] 23 Oct: Danish submits
