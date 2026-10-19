@@ -14,6 +14,7 @@ SDP Hackathon T&C cl. 14: everything we use must be lawfully obtained and licens
 | Remotion 4.0.533 (`remotion`, `@remotion/cli`, `@remotion/google-fonts`) — `video/` only | pitch video: motion graphics rendered to MP4 | Remotion License — Free License tier (individuals; free for commercial video). A for-profit company with 4+ employees that runs this code itself needs a Remotion Company License. The rendered video is not restricted |
 | Geist font (via `@remotion/google-fonts`) | pitch video type | SIL OFL 1.1 |
 | "Heavy rain Thunder" by kanematsutei (Pixabay, sound effect 145345) — `video/public/audio/heavy-rain-thunder.mp3` | pitch video: rain + thunder under scenes 1–3 | Pixabay Content License — free, no attribution required; not Content ID registered (checked 19 Oct). https://pixabay.com/sound-effects/nature-heavy-rain-thunder-145345/ |
+| "Ambient Cinematic" by ElectroAnimals (Pixabay, music 588276) — `video/public/audio/ambient-cinematic.mp3` | pitch video: music from 0:34 to the end | Pixabay Content License — free, no attribution required; not Content ID registered, not AI-generated (checked 20 Oct). https://pixabay.com/music/ambient-ambient-cinematic-588276/ |
 | playwright-core 1.63.0 — `video/` only | drives the app to screen-record the demo scenes (no browser download; uses the installed Chrome) | Apache-2.0 |
 
 ## Data and services

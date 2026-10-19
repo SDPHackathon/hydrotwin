@@ -49,7 +49,7 @@ const Film: React.FC = () => (
         </Series.Sequence>
       ))}
     </Series>
-    <Soundtrack lightAt={startOf("S04-Title")} />
+    <Soundtrack lightAt={startOf("S04-Title")} filmEnd={scenes.reduce((n, s) => n + s.duration, 0)} />
   </>
 );
 

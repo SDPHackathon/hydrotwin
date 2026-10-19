@@ -15,7 +15,15 @@ const XFADE = sec(2);
 const FULL = 0.9;
 const BED = 0.6;
 
-export const Soundtrack: React.FC<{ lightAt: number }> = ({ lightAt }) => {
+// ambient-cinematic.mp3 (3:13): soft intro, builds at ~25–30 s, full until ~2:40, quiet ending.
+// Placed so it ends with the film — which puts its build on the HydroTwin title.
+const MUSIC = "audio/ambient-cinematic.mp3";
+const MUSIC_LEN = Math.floor(193.2 * 30);
+const UNDER_RAIN = 0.2;
+const MUSIC_FULL = 0.45;
+
+export const Soundtrack: React.FC<{ lightAt: number; filmEnd: number }> = ({ lightAt, filmEnd }) => {
+  const musicAt = filmEnd - MUSIC_LEN;
   // lightAt = the frame the title scene starts; the rain fades out over its first 2 s.
   const loopAt = RAIN_LEN - XFADE;
   const rainLevel = (t: number) => interpolate(t, [sec(15), sec(17)], [FULL, BED], clamp);
@@ -34,6 +42,15 @@ export const Soundtrack: React.FC<{ lightAt: number }> = ({ lightAt }) => {
           src={staticFile(RAIN)}
           trimBefore={STEADY_FROM}
           volume={(f) => BED * interpolate(f, [0, XFADE], [0, 1], clamp) * fadeOut(f + loopAt)}
+        />
+      </Sequence>
+      <Sequence from={musicAt} durationInFrames={MUSIC_LEN}>
+        <Html5Audio
+          src={staticFile(MUSIC)}
+          volume={(f) =>
+            interpolate(f + musicAt, [lightAt, lightAt + sec(3)], [UNDER_RAIN, MUSIC_FULL], clamp) *
+            interpolate(f, [0, sec(3), MUSIC_LEN - sec(3), MUSIC_LEN], [0, 1, 1, 0], clamp)
+          }
         />
       </Sequence>
     </>
