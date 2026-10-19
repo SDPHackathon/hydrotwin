@@ -13,6 +13,7 @@ SDP Hackathon T&C cl. 14: everything we use must be lawfully obtained and licens
 | Geist font (via `next/font`) | UI font | SIL OFL 1.1 |
 | Remotion 4.0.533 (`remotion`, `@remotion/cli`, `@remotion/google-fonts`) — `video/` only | pitch video: motion graphics rendered to MP4 | Remotion License — Free License tier (individuals; free for commercial video). A for-profit company with 4+ employees that runs this code itself needs a Remotion Company License. The rendered video is not restricted |
 | Geist font (via `@remotion/google-fonts`) | pitch video type | SIL OFL 1.1 |
+| playwright-core 1.63.0 — `video/` only | drives the app to screen-record the demo scenes (no browser download; uses the installed Chrome) | Apache-2.0 |
 
 ## Data and services
 

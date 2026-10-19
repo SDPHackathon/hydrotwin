@@ -1,25 +1,27 @@
 # Pitch video — storyboard
 
-**Owner:** Azim · **Length:** ~4:10 (limit 5:00) · 1920×1080, 30 fps · **Sound:** captions + music (no voice-over for now)
-**Built with:** Remotion in `video/` (motion graphics) + scripted screen recordings of the real app. Rough cut **Wed 21 Oct**.
+**Owner:** Azim · **Length:** 3:48 as built (limit 5:00) · 1920×1080, 30 fps · **Sound:** captions + music (no voice-over for now; music not added yet)
+**Built with:** Remotion in `video/` (motion graphics) + scripted screen recordings of the real app (`video/scripts/record/`). Rough cut **Wed 21 Oct**.
 
-MG = motion graphics · REC = screen recording of HydroTwin. Captions are the narration — each line below appears on screen.
+MG = motion graphics · REC = screen recording of HydroTwin (production build, scripted with Playwright). Captions are the narration — each line below appears on screen.
 
 | # | Time | On screen | Caption |
 |---|---|---|---|
 | 1 | 0:00–0:15 | MG — rain on a dark screen, the Bukit Raja street map draws in, the camera pushes into Phase 1, water rises, Jalan Makyong turns red | Over two hours of rain flooded Phase 1 of Bandar Bukit Raja. Jalan Makyong was among the worst hit. |
-| 2 | 0:15–0:30 | MG — RM6.1 billion counter, about half in Selangor | Floods cost Malaysia RM6.1 billion in 2021 — about half of it in Selangor. |
-| 3 | 0:30–0:55 | MG — three people and their question: resident, guard, planner | In a flash flood, minutes matter. Residents don't know which street floods next. Guards don't know who needs help first. Planners can't test a drain before they build it. |
-| 4 | 0:55–1:10 | MG — logo, tagline, map tilts to 3D, three modes: Live, Safe Routes, Plan | HydroTwin is a digital twin of Bandar Bukit Raja's streets and drains. One map, three modes. |
-| 5 | 1:10–1:35 | MG — drain sensors → risk engine → street status + minutes to flood → phones + guard desk; "Prototype: sensors simulated · rule-based, not hydraulics" | Water-level sensors in ten drain zones feed a risk engine. Every street gets a status and the minutes until it floods. In this prototype the sensors are simulated. |
-| 6 | 1:35–2:05 | REC laptop — `/control` starts the 126 mm/h storm, D08 turns red first, water spreads, flooded-street count climbs | A 126 mm/h storm. Drain zone 8 turns red first — then the water spreads, street by street. |
-| 7 | 2:05–2:45 | REC laptop + 2 phones — resident alert → *I need help* → guard phone beeps → *On my way* + route around deep water → "Guard Rahim on the way" → *Resolved* | One tap asks for help. The guard on duty gets it instantly, with a route around the deepest water. The resident sees who's coming. |
-| 8 | 2:45–3:00 | REC — Safe Routes: walking route to the nearest safe point, red roads blocked | Residents who can leave get a walking route around flooded roads. |
-| 9 | 3:00–3:30 | REC — Plan: add a pond / bigger drain, replay the same storm, before/after count (real numbers from the app) | Add a pond or a bigger drain, replay the same storm, and compare — before you build. |
-| 10 | 3:30–3:55 | MG — uses what a township already has (guards, drains, phones, no app store) · pilot one drain zone → real sensors → every SDP township · township management service | HydroTwin runs on what a township already has. Start with one drain zone, add real sensors, then every SDP township. |
-| 11 | 3:55–4:10 | MG — tagline, team names, repo link, honesty line, AI-use note, sources | Warn residents today. Plan a township that floods less tomorrow. |
+| 2 | 0:15–0:30 | MG — RM6.1 billion as the one hero number; the water below splits, Selangor's half brighter | Floods cost Malaysia RM6.1 billion in 2021. About half of it was in Selangor. |
+| 3 | 0:30–0:55 | MG — three pins on the real map: a resident (Jalan Makyong 6), the guard post (Jalan Gamelan 1D), a planner on empty land | In a flash flood, minutes matter. · Which street floods next? Do we leave now? · Who needs help first? · Will a new phase make it worse? · Today, each of them is guessing. |
+| 4 | 0:55–1:10 | MG — water covers the screen, drains away, the film turns light: wordmark, tagline, map tilts to 3D with the 10 drain sensors | Warn residents today. Plan a township that floods less tomorrow. · A digital twin of Bandar Bukit Raja's streets and drains. One map, three modes: Live, Safe Routes, Plan |
+| 5 | 1:10–1:35 | MG — drain sensors → risk engine (the engine's own rules) → street status (the engine's real output at minute 100 of the demo storm) → alerts | From a drain sensor to a resident's phone, one street at a time. |
+| 6 | 1:35–2:01 | REC laptop — the demo storm at the app's 4×, quiet part sped up 1.6× more (labelled); D08 red first, then the spread (106 flooded streets at 1:49) | A 126 mm/h storm hits the township. · Drain zone 8 turns red first. · Then the water spreads, street by street. |
+| 7 | 2:01–2:33 | REC 2 phones — Tan Wei Ming (fictional) asks for help → Guard Rahim gets the SOS + route (156 m dry + 197 m through water) → on my way → resolved | Tan Wei Ming's street floods. · One tap asks for help. · Guard Rahim gets it instantly. · With a route around the deepest water. · The resident sees who's coming. · Resolved, on both phones. |
+| 8 | 2:33–2:46 | REC — Safe Routes from minute 84: route to the Gamelan assembly point (305 m); D08 floods, it switches to Sumazau (321 m) | Residents who can leave get a walking route to the nearest safe point. · A road floods, and the route changes by itself. |
+| 9 | 2:46–3:10 | REC — Plan: ponds at D08 + D07, bigger drains at D05 + D06; zoom on the app's Before vs After (142 → 57 flooded streets, 52.7 → 12.8 cm, first flood 90 → 107 min); replay sped up (labelled) | Plan mode is for tomorrow. · Add a retention pond or a bigger drain… · …and see it at once: 142 flooded streets become 57. · Then replay the same storm, before you build. |
+| 10 | 3:10–3:32 | MG — what a township already has (guards, drains, phones) + the way in: pilot Phase 1 → real sensors → every SDP township | Built on what a township already has. |
+| 11 | 3:32–3:48 | MG — wordmark, tagline, team, repo, honesty line, AI-use note, sources | Warn residents today. Plan a township that floods less tomorrow. |
 
-**Decisions (19 Oct):** ~4:10 kept · captions + music first · Plan scene = pond / drain upgrades (Danish's new-housing screening added if merged in time) · end card shows the 5 team names.
+**Decisions (19 Oct):** ~4 min · captions + music first · Plan scene = pond / drain upgrades (Danish's new-housing screening added if merged in time) · end card shows the 5 team names.
+
+**Re-recording** (after app changes): `npm run build && npm run start -- -p 3001` in the repo root, then in `video/`: `node scripts/record/s06-storm.mjs` (and `s07-help`, `s08-routes`, `s09-plan`). Each writes `public/rec/<scene>.mp4` + a `.json` of timing marks; if the marks move, update the constants at the top of the matching scene file.
 
 ## Facts on screen
 | Claim | Source | Status |
