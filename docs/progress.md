@@ -43,7 +43,7 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] `/guard`: pick a guard, Start shift (alert sound), SOS cards with the ask + elapsed timer, *On my way* → *Resolved*
 - [x] Route to the resident on a small map, wet stretch dashed — ROUTE-2 (`components/ResponderMap.tsx`)
 - [x] Installable phone pages (manifests + icons) · README phone section (same Wi-Fi link, Add to Home Screen)
-- [ ] Azim's phone on the laptop's Wi-Fi: Add to Home Screen, Start shift beep, full loop phone ↔ phone
+- [ ] Azim's phone on the laptop's network: Add to Home Screen, Start shift beep, full loop phone ↔ phone — use a phone hotspot (big shared Wi-Fi blocks phone ↔ laptop, 19 Oct)
 
 ## Development screening extension (18 Oct) ✅
 - [x] Plan mode: new development workflow alongside existing township upgrades; draw/undo/finish a site boundary, choose housing/commercial, automatic nearest-road / Live zone suggestions with manual overrides, before/after land cover
@@ -52,6 +52,8 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] Versioned browser storage, load proposals, compare two at any scenario stage; existing upgrade saves preserved
 - [x] Validation: 43 engine tests (11 development tests), lint and production build pass; browser verified drawing, presets, scenario results/map, saved comparisons and persistence; automatic selection, manual overrides and restore suggestions; no browser console errors
 - [x] Development v2: remove manual catchment area, estimate zone footprint from the existing street cluster; legacy development saves remain readable and recalculate with current assumptions
+- [x] 19 Oct: development access road uses a solid near-black line with white casing and matching legend for contrast against status roads and water; verified on localhost:3000 after map reload.
+- [x] 19 Oct: completed development sites show labelled, infinitely moving runoff arrows toward the selected simulated drain zone; schematic connection, with static arrows for reduced motion.
 
 ## Traffic extension — first working release (19 Oct)
 
@@ -74,15 +76,16 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] Validation: 54 tests pass, lint and TypeScript pass; browser baseline, site drawing/access, existing/developed/mitigated comparison, timeline, saves and mobile layout inspected. Baseline benchmark including anchor selection ~1.1 s for 1,979 segments / 630 trips. Production build passes using `npm run build -- --webpack`; default Turbopack build fails here before compiler helper connection (exit 0), with the same failure across Node runtimes.
 - [ ] Later plan stages: boundary portals, access-segment insertion, per-road attribute overrides, full conditional/via-way restrictions, barrier handling, measured demand calibration, upstream spillback, second access, journey explorer and flood coupling.
 
-## Submission wrap-up
-
-- [x] 19 Oct: documented proposed traffic simulation and development-impact implementation in `docs/traffic-implementation-plan.md`; planning only, traffic implementation has not started.
-
-- [x] 19 Oct: swapped township and mode navigation positions; compact sidebar mode tabs, expanding map township picker with current location label, hover/focus previews, scrollable downloaded locations and download action; responsive list layout
+## UI Navigation & Polish (18–19 Oct)
 - [x] 18 Oct: map-centered expanding mode navigation replaces sidebar tabs; animated label entrance, hover/focus dashes and image crossfades, keyboard selection/Escape, reduced-motion support; licensed replaceable local stock images
+- [x] 19 Oct: swapped township and mode navigation positions; compact sidebar mode tabs, expanding map township picker with current location label, hover/focus previews, scrollable downloaded locations and download action; responsive list layout
 - [x] 19 Oct: mode switches blur the map and panel before changing content, then sharpen; styles imported directly by Dashboard to fix stale development CSS; captured intermediate blur for all three top-center tabs on localhost:3000 and verified return to clear
+- [x] 19 Oct: Overpass server download robustness: replaced dead mirror with OSM France mirror, aligned client timeout with query timeout
+
+## Wrap-up
+- [x] Cloud: migrations `20261016…` + `20261018…_help_loop` applied (Danish, 18 Oct) · setup guide sent (Azim)
+- [x] Cloud: `20261018234500_lock_public_writes.sql` applied (Azim, 19 Oct) — 8 policies left, checked in Database → Policies
+- [ ] Cloud: `SUPABASE_SERVICE_ROLE_KEY` on the demo laptop → test Cloud Phone Sync
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)
 - [ ] 22 Oct: full run-through · README final · AI-use log + third-party list complete · repo public
 - [ ] 23 Oct: Danish submits
-- [x] 19 Oct: development access road uses a solid near-black line with white casing and matching legend for contrast against status roads and water; verified on localhost:3000 after map reload.
-- [x] 19 Oct: completed development sites show labelled, infinitely moving runoff arrows toward the selected simulated drain zone; schematic connection, with static arrows for reduced motion.
