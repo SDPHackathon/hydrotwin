@@ -43,11 +43,12 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] `/guard`: pick a guard, Start shift (alert sound), SOS cards with the ask + elapsed timer, *On my way* → *Resolved*
 - [x] Route to the resident on a small map, wet stretch dashed — ROUTE-2 (`components/ResponderMap.tsx`)
 - [x] Installable phone pages (manifests + icons) · README phone section (same Wi-Fi link, Add to Home Screen)
-- [ ] Azim's phone on the laptop's Wi-Fi: Add to Home Screen, Start shift beep, full loop phone ↔ phone
+- [ ] Azim's phone on the laptop's network: Add to Home Screen, Start shift beep, full loop phone ↔ phone — use a phone hotspot (big shared Wi-Fi blocks phone ↔ laptop, 19 Oct)
 
 ## Wrap-up
 - [x] Cloud: migrations `20261016…` + `20261018…_help_loop` applied (Danish, 18 Oct) · setup guide sent (Azim)
-- [ ] Cloud: apply `20261018234500_lock_public_writes.sql` (SQL Editor) + `SUPABASE_SERVICE_ROLE_KEY` on the demo laptop → test Cloud Phone Sync
+- [x] Cloud: `20261018234500_lock_public_writes.sql` applied (Azim, 19 Oct) — 8 policies left, checked in Database → Policies
+- [ ] Cloud: `SUPABASE_SERVICE_ROLE_KEY` on the demo laptop → test Cloud Phone Sync
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)
 - [ ] 22 Oct: full run-through · README final · AI-use log + third-party list complete · repo public
 - [ ] 23 Oct: Danish submits
