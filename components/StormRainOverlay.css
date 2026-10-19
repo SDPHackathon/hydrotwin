@@ -1,0 +1,10 @@
+.storm-rain-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+.storm-map-label { position: absolute; z-index: 2; bottom: 40px; left: 12px; max-width: calc(100% - 60px); padding: 10px 12px; border: 1px solid #bfdbfe; border-radius: 12px; background: rgb(255 255 255 / 96%); color: #1e3a5f; box-shadow: 0 3px 14px rgb(28 25 23 / 10%); }
+.storm-map-summary { display: flex; align-items: center; gap: 10px; pointer-events: none; }
+.storm-map-summary svg { flex-shrink: 0; }
+.storm-map-summary strong { display: block; font-size: 12px; line-height: 1.5; }
+.storm-map-summary span { display: block; font-size: 10px; line-height: 1.6; color: #57534e; }
+.storm-animation-toggle { display: block; margin: 5px 0 -4px 33px; padding: 4px 0; background: transparent; border: 0; font-size: 10px; color: #475569; text-decoration: underline; text-underline-offset: 3px; }
+.storm-animation-toggle:focus-visible { outline: 2px solid #0284c7; outline-offset: 3px; }
+.storm-map-label[data-phase="lost"], .storm-map-label[data-phase="unavailable"] { border-color: #fcd34d; color: #92400e; }
+@media (max-width: 600px) { .storm-map-label { left: 10px; bottom: 32px; padding: 7px 10px; } .storm-map-summary strong { font-size: 11px; } }

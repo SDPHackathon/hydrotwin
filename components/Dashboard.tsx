@@ -14,7 +14,6 @@ import type { Area, Streets } from "@/lib/area";
 import { STATUS_COLOR } from "@/lib/colors";
 import { applyInterventions, recommendInterventions, replayStorm } from "@/lib/engine/plan";
 import { findSafeRoute, type RoadPoint, type RoadPosition, type RouteDestination, type RouteResult } from "@/lib/engine/route";
-import { STORM_MINUTES } from "@/lib/engine/storm";
 import type { Drain, DrainStatus, InterventionKind, PlanIntervention, Status } from "@/lib/engine/types";
 import { supabase } from "@/lib/supabase";
 import {
@@ -24,6 +23,7 @@ import {
   type LocalTownshipMeta,
 } from "@/lib/storage/township-db";
 import { useLocalStorm } from "@/lib/useLocalStorm";
+import { isStormPlayback, phoneSyncState, PHONE_SYNC_TIMEOUT_MS, presentStorm, REPLAY_END_MINUTE, type PhoneSync, type StormPlayback } from "@/lib/storm-presentation";
 import { WATER_HEIGHT_SCALE } from "@/lib/water";
 
 const SEVERITY: Record<Status, number> = { red: 0, amber: 1, green: 2 };
@@ -101,7 +101,8 @@ function DashboardView({
   // Live data source: "local" (in-browser simulation) or "cloud" (Supabase / Phone /control sync)
   const [liveSource, setLiveSource] = useState<"local" | "cloud">("local");
   const [cloudStatuses, setCloudStatuses] = useState<Record<string, DrainStatus>>({});
-  const [cloudStormState, setCloudStormState] = useState<{ minute: number; running: boolean } | null>(null);
+  const [cloudStormState, setCloudStormState] = useState<StormPlayback | null>(null);
+  const [phoneSync, setPhoneSync] = useState<PhoneSync>("waiting");
 
   // Mobile companion launcher modal
   const [mobileModalOpen, setMobileModalOpen] = useState(false);
@@ -211,26 +212,42 @@ function DashboardView({
       ? upgradedDrains
       : currentDrains;
   const storm = useLocalStorm(activeSimulationDrains);
+  const displayedStorm = presentStorm({ local: storm, phone: cloudStormState,
+    usePhone: mode !== "plan" && liveSource === "cloud", phoneSupported: currentArea.slug === "bukit-raja", sync: phoneSync });
 
   // Supabase Realtime & Periodic Poll when liveSource is "cloud"
   useEffect(() => {
-    if (liveSource !== "cloud") return;
+    if (liveSource !== "cloud" || currentArea.slug !== "bukit-raja") return;
 
     let mounted = true;
+    let lastSuccess = Date.now();
+    let fetching = false;
+    const controller = new AbortController();
     const fetchCloud = async () => {
+      if (fetching) return;
+      fetching = true;
       try {
-        const res = await fetch("/api/risk-engine");
+        const res = await fetch("/api/risk-engine", { cache: "no-store", signal: controller.signal });
         if (res.ok && mounted) {
           const data = await res.json();
+          const playback: unknown = data;
+          if (!mounted || !isStormPlayback(playback)) return;
           if (data.statuses) setCloudStatuses(data.statuses);
-          if (data.minute !== undefined) setCloudStormState({ minute: data.minute, running: data.running });
+          setCloudStormState({ minute: playback.minute, running: playback.running, speed: playback.speed });
+          lastSuccess = Date.now();
+          setPhoneSync(phoneSyncState(playback, data.stormAgeMs));
         }
       } catch {
-        // Ignored
+        // The freshness timer below reports lost sync; never replace phone weather with local rain.
+      } finally {
+        fetching = false;
       }
     };
     fetchCloud();
     const interval = setInterval(fetchCloud, 1500);
+    const freshness = setInterval(() => {
+      if (Date.now() - lastSuccess >= PHONE_SYNC_TIMEOUT_MS) setPhoneSync("lost");
+    }, 1000);
 
     const channel = supabase
       .channel("public:drain_status")
@@ -252,18 +269,20 @@ function DashboardView({
 
     return () => {
       mounted = false;
+      controller.abort();
       clearInterval(interval);
+      clearInterval(freshness);
       supabase.removeChannel(channel);
     };
-  }, [liveSource]);
+  }, [liveSource, currentArea.slug]);
 
   // Active statuses: in Cloud mode use cloudStatuses, else local simulation
   const activeStatuses = useMemo(() => {
-    if (liveSource === "cloud" && Object.keys(cloudStatuses).length > 0) {
+    if (mode !== "plan" && liveSource === "cloud" && Object.keys(cloudStatuses).length > 0) {
       return cloudStatuses;
     }
     return storm.statuses;
-  }, [liveSource, cloudStatuses, storm.statuses]);
+  }, [mode, liveSource, cloudStatuses, storm.statuses]);
 
   // Safe Routes (ROUTE-1) Calculation
   const safeRouteResult: RouteResult | null = useMemo(() => {
@@ -369,6 +388,7 @@ function DashboardView({
       <div className="relative min-h-0 min-w-0">
       <div className="dashboard-mode-surface h-full w-full" data-mode-phase={modePhase}>
       <TownshipMap
+        storm={developmentActive ? undefined : displayedStorm}
         area={currentArea}
         drains={activeSimulationDrains}
         streets={currentStreets}
@@ -503,7 +523,7 @@ function DashboardView({
                   <span className="font-mono text-sm font-bold text-stone-900">
                     {clock(storm.minute)}
                   </span>
-                  <span className="text-[10px] text-stone-400 block font-normal">/ {clock(STORM_MINUTES)}</span>
+                  <span className="text-[10px] text-stone-400 block font-normal">/ {clock(REPLAY_END_MINUTE)}</span>
                 </div>
               </div>
 
@@ -758,7 +778,13 @@ function DashboardView({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setLiveSource("cloud")}
+                  onClick={() => {
+                    if (liveSource === "cloud") return;
+                    storm.pause();
+                    setCloudStormState(null);
+                    setPhoneSync("waiting");
+                    setLiveSource("cloud");
+                  }}
                   className={`px-2.5 py-1 rounded transition flex items-center gap-1.5 ${
                     liveSource === "cloud" ? "bg-white text-stone-900 shadow-xs font-semibold" : "text-stone-600 hover:text-stone-900"
                   }`}
@@ -815,7 +841,7 @@ function DashboardView({
 
             {liveSource === "cloud" && (
               <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 flex items-center justify-between">
-                <span>🟢 Connected to Supabase Cloud & Phone Controller</span>
+                <span>{displayedStorm.rainMmPerHour === null ? displayedStorm.label : "Synced to phone storm controller"}</span>
                 <button
                   type="button"
                   onClick={() => setMobileModalOpen(true)}
@@ -830,23 +856,24 @@ function DashboardView({
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-stone-500">Storm time</span>
                 <span className="font-mono text-2xl tabular-nums">
-                  {clock(liveSource === "cloud" && cloudStormState ? cloudStormState.minute : storm.minute)}{" "}
-                  <span className="text-sm text-stone-400">/ {clock(STORM_MINUTES)}</span>
+                  {displayedStorm.rainMmPerHour === null ? "—" : clock(displayedStorm.minute)}{" "}
+                  <span className="text-sm text-stone-400">/ {clock(REPLAY_END_MINUTE)}</span>
                 </span>
               </div>
               <p className="mt-1 text-sm text-stone-600">
-                Rain: <strong className="tabular-nums">{storm.rainMmPerHour} mm/h</strong>
+                Rain: <strong className="tabular-nums">{displayedStorm.rainMmPerHour === null ? "—" : `${displayedStorm.rainMmPerHour} mm/h`}</strong>
                 <span className="text-stone-400"> · simulated storm</span>
               </p>
+              <p className="mt-1 text-xs text-stone-500">{displayedStorm.label}{displayedStorm.rainMmPerHour !== null ? ` · Playback ${displayedStorm.speed}×` : ""}</p>
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={storm.running ? storm.pause : storm.start}
                   disabled={storm.finished || liveSource === "cloud"}
                   className="flex-1 rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
                 >
-                  {liveSource === "cloud" ? (cloudStormState?.running ? "Running (Phone Sync)" : "Paused (Phone Sync)") : storm.running ? "Pause" : storm.minute === 0 ? "Start storm" : "Resume"}
+                  {liveSource === "cloud" ? displayedStorm.label : storm.running ? "Pause" : storm.finished ? "Complete" : storm.minute === 0 ? "Start storm" : "Resume"}
                 </button>
-                <button onClick={storm.reset} className="rounded-lg border border-stone-300 px-3 py-2 text-sm">
+                <button onClick={storm.reset} disabled={liveSource === "cloud"} className="rounded-lg border border-stone-300 px-3 py-2 text-sm disabled:opacity-40">
                   Reset
                 </button>
                 <div className="flex overflow-hidden rounded-lg border border-stone-300 text-sm">
@@ -855,7 +882,7 @@ function DashboardView({
                       key={x}
                       onClick={() => storm.setSpeed(x)}
                       disabled={liveSource === "cloud"}
-                      className={`px-2.5 ${storm.speed === x ? "bg-stone-900 text-white" : ""}`}
+                      className={`px-2.5 ${displayedStorm.rainMmPerHour !== null && displayedStorm.speed === x ? "bg-stone-900 text-white" : ""}`}
                     >
                       {x}×
                     </button>

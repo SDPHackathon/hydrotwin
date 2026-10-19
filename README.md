@@ -31,6 +31,7 @@ drain sensors (simulated) → risk engine → street status → map · resident 
 - **Risk engine** (`lib/engine/risk.ts`): red when a drain overflows; amber at 70 % full or when red is under 30 minutes away. Rules: [`docs/data-contracts.md`](docs/data-contracts.md).
 - **Simulator** (`lib/engine/sim.ts`): each minute, level rises with rain × how low the ground is, and falls with the drain's outflow. Low-lying zones flood first.
 - **Map**: MapLibre GL JS on OpenFreeMap, with OpenStreetMap streets and buildings.
+- **Demo rain**: falling streaks over the map build and ease with the synthetic rainfall curve; replay speed adds a capped visual boost. The map label shows running/paused/draining/complete state, rainfall and speed. Pause freezes rain, reset clears it, and “Rain animation” hides particles without stopping the simulation; reduced motion uses a static cue. Phone weather follows Bukit Raja's controller and reports lost sync if a running phone stops updating. This is a screen-space visual effect, not physical rain or building occlusion. Rain ends at minute 150; replay continues to minute 210 for drainage. Traffic and development peak previews show no rain.
 - **Backend**: Supabase (Postgres, Realtime, Auth, Edge Functions).
 
 ## On a phone — resident, guard, control

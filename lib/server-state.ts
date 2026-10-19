@@ -6,6 +6,7 @@ import { getServerSupabase } from "@/lib/supabase";
 import drainsData from "@/public/data/bukit-raja/drains.json";
 
 interface ServerStore {
+  stormUpdatedAt: number | null;
   minute: number;
   running: boolean;
   speed: number;
@@ -30,6 +31,7 @@ function initStore(): ServerStore {
   }
 
   return {
+    stormUpdatedAt: null,
     minute: 0,
     running: false,
     speed: 1,
@@ -53,6 +55,7 @@ export function getDrains(): Drain[] {
 
 export function getState() {
   return {
+    stormAgeMs: store.stormUpdatedAt == null ? null : Math.max(0, Date.now() - store.stormUpdatedAt),
     minute: store.minute,
     running: store.running,
     speed: store.speed,
@@ -67,6 +70,7 @@ export function resetState() {
   store.minute = 0;
   store.running = false;
   store.speed = 1;
+  store.stormUpdatedAt = Date.now();
   store.histories = fresh.histories;
   store.statuses = fresh.statuses;
   store.guardTasks = [];
@@ -90,6 +94,7 @@ export async function processReadings(readings: Array<{
   sim_minute?: number;
   source?: "sim" | "device";
 }>, minute?: number, running?: boolean, speed?: number) {
+  if (minute !== undefined || running !== undefined || speed !== undefined) store.stormUpdatedAt = Date.now();
   if (minute !== undefined) store.minute = minute;
   if (running !== undefined) store.running = running;
   if (speed !== undefined) store.speed = speed;

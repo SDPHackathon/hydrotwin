@@ -15,10 +15,13 @@ import { slabHeights } from "@/lib/water";
 import type { RoadPoint } from "@/lib/engine/route";
 import type { SitePoint } from "@/lib/engine/development";
 import DevelopmentFlowOverlay from "@/components/DevelopmentFlowOverlay";
+import StormRainOverlay from "@/components/StormRainOverlay";
+import type { StormPresentation } from "@/lib/storm-presentation";
 
 const BASE_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
 type Props = {
+  storm?: StormPresentation;
   area: Area;
   drains: Drain[];
   streets: Streets;
@@ -91,6 +94,7 @@ export default function TownshipMap({
   trafficData,
   onTrafficPick,
   sites,
+  storm,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
@@ -541,5 +545,5 @@ export default function TownshipMap({
     m.on('click','traffic-roads',click);
     return ()=>{m.off('click','traffic-roads',click);};
   },[ready,trafficData,onTrafficPick]);
-  return <div className="relative h-full min-h-0 w-full"><div ref={container} className="h-full w-full" />{ready && flowMap && siteClosed && siteBoundary && siteBoundary.length >= 3 && flowDrain && <DevelopmentFlowOverlay map={flowMap} boundary={siteBoundary} drain={flowDrain} />}{siteCaption && <div className="pointer-events-none absolute bottom-16 left-3 right-3 max-w-lg rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs text-stone-800 shadow-sm"><strong>Development scenario</strong><br />{siteCaption}<br /><span className="text-stone-500">Indigo: proposed site · dark line with white outline: selected access road. Zone street depths only.</span></div>}</div>;
+  return <div className="relative h-full min-h-0 w-full"><div ref={container} className="h-full w-full" />{storm && <StormRainOverlay key={`${area.slug}-${storm.source}`} storm={storm} />}{ready && flowMap && siteClosed && siteBoundary && siteBoundary.length >= 3 && flowDrain && <DevelopmentFlowOverlay map={flowMap} boundary={siteBoundary} drain={flowDrain} />}{siteCaption && <div className="pointer-events-none absolute bottom-16 left-3 right-3 max-w-lg rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs text-stone-800 shadow-sm"><strong>Development scenario</strong><br />{siteCaption}<br /><span className="text-stone-500">Indigo: proposed site · dark line with white outline: selected access road. Zone street depths only.</span></div>}</div>;
 }

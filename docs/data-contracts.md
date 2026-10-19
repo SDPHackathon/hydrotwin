@@ -102,6 +102,14 @@ Each simulated minute: `level = max(0, level + rain_mm × catchment_factor − o
 
 With the current storm (peak ≈126 mm/h) the water spreads D08 → D07 → D05 → D06 → D02 → D01/D09 over ~22 storm-minutes, 5–50 cm deep; D03/D04 reach amber, D10 stays green.
 
+### On-map demo weather presentation
+
+`lib/storm-presentation.ts` derives display-only weather from the active replay's `minute`, `running` and `speed`, using `rainAt(minute) * 60` for mm/h. Live/Routes follow the selected local/phone source; Plan upgrade replay always uses its local state. Development independent-peak previews and Traffic have no rain overlay. Phone weather is supported for Bukit Raja only. Presentation never writes drain status or changes simulation input.
+
+The existing `/api/risk-engine` response additionally includes `stormAgeMs`: milliseconds since a controller submitted playback metadata or reset the storm, or null before any controller contact. This uses server time and is not persisted. A running, unfinished phone snapshot expires after six seconds without a controller update. Paused/completed snapshots need no controller heartbeat. The dashboard also marks sync lost after six seconds without a valid API response; unknown/lost/unsupported phone weather has null rainfall rather than substituting local weather. API responses are polled every 1.5 seconds.
+
+Rain drops stop at minute 150 while drainage replay continues through minute 210. Pausing freezes drops; reset clears them. Rainfall controls visual density/length/opacity and base movement speed. Playback multiplies movement by `min(2.5, sqrt(max(1, speed)))` only; it does not change mm/h. Canvas particles are decorative screen-space streaks, not building-occluded 3D weather or a hydraulic model. Reduced motion renders a static cue; “Rain animation” can hide the particles independently of playback. No database migration or new external dependency is involved.
+
 ### Recommended upgrades
 
 Plan mode evaluates the current township against the existing synthetic storm. It selects up to two interventions on distinct drains, ranking outcomes by fewer flooded streets, lower peak street depth, later first overflow (no overflow is best), then fewer interventions. It recommends no changes if no candidate improves the baseline. These are results under the demo simulator and its assumed intervention multipliers, not a hydraulic or engineering design assessment.

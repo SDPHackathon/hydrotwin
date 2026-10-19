@@ -66,6 +66,7 @@ export default function ControlPage() {
     const m = minuteRef.current;
     if (m >= END_MINUTE) {
       setRunning(false);
+      pushReadings(m, levelsRef.current, false, speed);
       return;
     }
     const nextMinute = m + 1;
@@ -79,7 +80,9 @@ export default function ControlPage() {
       nextLevels[d.id] = Math.round(stepLevel(d, prev, rain) * 10) / 10;
     }
     setLevels(nextLevels);
-    pushReadings(nextMinute, nextLevels, true, speed);
+    const nextRunning = nextMinute < END_MINUTE;
+    if (!nextRunning) setRunning(false);
+    pushReadings(nextMinute, nextLevels, nextRunning, speed);
   }, [pushReadings, speed]);
 
   useEffect(() => {
@@ -89,6 +92,7 @@ export default function ControlPage() {
   }, [running, speed, tick]);
 
   const handleStart = () => {
+    if (minuteRef.current >= END_MINUTE) return;
     setRunning(true);
     pushReadings(minuteRef.current, levelsRef.current, true, speed);
   };
@@ -100,6 +104,7 @@ export default function ControlPage() {
 
   const handleReset = async () => {
     setRunning(false);
+    setSpeed(1);
     minuteRef.current = 0;
     setMinute(0);
     const zeroLevels = Object.fromEntries(drains.map((d) => [d.id, 0]));
@@ -172,9 +177,10 @@ export default function ControlPage() {
             {!running ? (
               <button
                 onClick={handleStart}
-                className="col-span-2 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 shadow-xs transition"
+                disabled={minute >= END_MINUTE}
+                className="col-span-2 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 shadow-xs transition disabled:opacity-40"
               >
-                <span>▶</span> Start Storm
+                <span>▶</span> {minute >= END_MINUTE ? "Storm complete" : "Start Storm"}
               </button>
             ) : (
               <button
