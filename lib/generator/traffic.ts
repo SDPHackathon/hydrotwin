@@ -24,7 +24,7 @@ export async function fetchTraffic(bbox:number[]) {
     if(response.ok) {const network=buildNetwork(parseOsmXml(await response.text()));if(network.links.length)return network;}
   } catch { /* use the buffered Overpass extract below */ }
   let lastError='';
-  for(const endpoint of ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.private.coffee/api/interpreter']) {
+  for(const endpoint of ['https://overpass.openstreetmap.fr/api/interpreter','https://overpass-api.de/api/interpreter','https://overpass.private.coffee/api/interpreter']) {
     try {
       const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded','User-Agent':'HydroTwin/0.1'},body:new URLSearchParams({data:query}),signal:AbortSignal.timeout(35000)});
       if(!response.ok) {lastError=`HTTP ${response.status}`;continue;}
