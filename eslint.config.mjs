@@ -18,6 +18,8 @@ const eslintConfig = defineConfig([
     ".claude/**",
     // Supabase Edge Functions (Deno environment)
     "supabase/functions/**",
+    // Pitch video — its own package (Remotion), type-checked with `npm run typecheck` in video/
+    "video/**",
   ]),
 ]);
 

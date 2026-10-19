@@ -1,0 +1,25 @@
+{
+  "name": "hydrotwin-video",
+  "private": true,
+  "description": "HydroTwin pitch video — Remotion (React → MP4). See docs/video-storyboard.md.",
+  "scripts": {
+    "data": "node scripts/copy-data.mjs",
+    "prestudio": "node scripts/copy-data.mjs",
+    "studio": "remotion studio --port 3002",
+    "prerender": "node scripts/copy-data.mjs",
+    "render": "remotion render HydroTwin out/hydrotwin.mp4",
+    "still": "remotion still",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.533",
+    "@remotion/google-fonts": "4.0.533",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.533"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "typescript": "5.9.3"
+  }
+}

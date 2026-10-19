@@ -1,0 +1,6 @@
+node_modules/
+out/
+# copied from ../public/data by scripts/copy-data.mjs
+src/data/
+# screen recordings of the app (re-recorded by script, too big for git)
+public/rec/

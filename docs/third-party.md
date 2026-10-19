@@ -11,12 +11,14 @@ SDP Hackathon T&C cl. 14: everything we use must be lawfully obtained and licens
 | MapLibre GL JS | 3D map rendering | BSD-3-Clause |
 | supabase-js | database, realtime, auth client | MIT |
 | Geist font (via `next/font`) | UI font | SIL OFL 1.1 |
+| Remotion 4.0.533 (`remotion`, `@remotion/cli`, `@remotion/google-fonts`) — `video/` only | pitch video: motion graphics rendered to MP4 | Remotion License — Free License tier (individuals; free for commercial video). A for-profit company with 4+ employees that runs this code itself needs a Remotion Company License. The rendered video is not restricted |
+| Geist font (via `@remotion/google-fonts`) | pitch video type | SIL OFL 1.1 |
 
 ## Data and services
 
 | Name | Used for | Licence / terms | Attribution |
 |---|---|---|---|
-| OpenStreetMap (via Overpass API) | streets + buildings of Bandar Bukit Raja | ODbL 1.0 | "© OpenStreetMap contributors" — shown on the map (dashboard) and under the route map (guard page) |
+| OpenStreetMap (via Overpass API) | streets + buildings of Bandar Bukit Raja | ODbL 1.0 | "© OpenStreetMap contributors" — shown on the map (dashboard), under the route map (guard page) and on every map scene of the pitch video |
 | OpenFreeMap | base map tiles + style (positron) | free, no key; tiles built from OSM (ODbL) with the OpenMapTiles schema | shown on the map (dashboard) and under the route map (guard page) |
 | Open-Meteo Elevation API | ground height of each drain zone (baked once into `drains.json`) | data CC BY 4.0; underlying DEM: Copernicus GLO-90. ⚠️ Open-Meteo's free API is for non-commercial use — fine for a prototype; production → their commercial plan or the Copernicus DEM directly | footer + this file |
 | OpenStreetMap Nominatim | Geocoding search for dynamic township addition | ODbL 1.0 / Nominatim Usage Policy (max 1 req/sec, custom User-Agent) | "© OpenStreetMap contributors" |
