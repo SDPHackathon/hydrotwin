@@ -68,3 +68,12 @@ Safe Routes uses user-designated safe destinations saved per township on this de
 *(names — add before submission)*
 
 New development previews show moving teal arrows from the site to the selected receiving drain zone. The label marks this as an assumed runoff direction: the straight connection is schematic and does not model terrain gradients, pipe alignments or actual water velocity. Arrows remain static when reduced motion is enabled.
+## Traffic workspace
+
+Choose **Traffic** in the dashboard sidebar. Retain the MapLibre map, draw a proposed township, enter homes/floor area, accept or adjust its suggested road connection, then **Assess township impact**. Current traffic comes from TomTom on surrounding sampled corridors; compare **Current traffic / With township**, inspect roads receiving additional trips, and review actual observation coverage. No replay or synthetic background-demand setup is required. Bukit Raja has a prepared OSM network; other townships attempt online preparation.
+
+Add `TOMTOM_TRAFFIC_API_KEY` to `.env.local` using a key from [MyTomTom](https://my.tomtom.com/) → API & SDK Keys, then restart the server. The key stays server-side. An assessment requests up to 24 traffic samples; refreshes are limited to once per 30 seconds per server process. Without a key or matched traffic, the app shows an unavailable/unknown state. Provider data stays in memory and expires after five minutes. Saved proposals contain inputs only.
+
+The impact model adds assumed development trips to a speed-based traffic baseline using incremental assignment and a BPR-style congestion curve. Speeds are observed/provider-derived; existing vehicle volumes are inferred, capacities and trip rates remain assumptions, and destinations are suggested network connections rather than observed commute patterns. Grey roads lack matched data. Coverage is explicit, so the app does not equate missing data with uncongested roads. Historical peaks, detailed signals, upstream spillback and a calibrated regional transport assessment remain outside this screening model.
+
+Prepare a separate offline traffic bundle with `node --experimental-strip-types scripts/prepare-traffic.mjs bukit-raja`; this does not regenerate flood data. If Turbopack's Windows compiler subprocess fails, `npm run build -- --webpack` uses the supported production fallback with the same Tailwind loader.

@@ -53,7 +53,30 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] Validation: 43 engine tests (11 development tests), lint and production build pass; browser verified drawing, presets, scenario results/map, saved comparisons and persistence; automatic selection, manual overrides and restore suggestions; no browser console errors
 - [x] Development v2: remove manual catchment area, estimate zone footprint from the existing street cluster; legacy development saves remain readable and recalculate with current assumptions
 
+## Traffic extension — first working release (19 Oct)
+
+- [x] 19 Oct review/handoff: recorded the user's request for real initial traffic and discussion of AI assumptions in `docs/traffic-real-data-handoff-plan.md`.
+- [x] Implemented real initial baseline loading on opening Traffic, honest unobserved road coloring (#a8a29e grey), road closure coloring (#7f1d1d), destination distribution split (70% external gateways / 30% internal hubs weighted by road capacity), trip generation presets (Low/Base/High), honest coverage-qualified conclusions and notes (existing baseline congestion and unassigned trips). 67 tests pass cleanly, lint and build pass.
+
+### Current workflow — real-data township impact (supersedes replay UI below)
+
+- [x] Retain MapLibre. Draw township → housing/commercial size → automatic existing-road connection → Assess township impact → Current traffic / With township. Removed replay, manual synthetic background traffic, timeline and mitigation stages from the workspace.
+- [x] Server-only TomTom Traffic Flow integration, bounded on-demand batches (24 samples maximum), no raw data persistence, process-local refresh throttle, confidence/age/direction/geometry checks and unknown grey roads. User configured the private key locally; server detection and a live response were verified without exposing its value.
+- [x] Pure impact engine: inferred speed-to-demand sensitivity with explicit BPR assumptions, ten incremental route-assignment batches, closures excluded, incomplete coverage shown. Heavy matching runs in the worker; geometry bounds and one endpoint check per candidate fixed the slowdown found with real 500+ vertex provider polylines.
+- [x] Browser live run returned 24/24 samples and matched 39/65 affected segments (~50% assigned-distance coverage) for the test site; current/proposed views, drawing, access suggestion and completed result confirmed. Unit suite expanded to 63 tests. Production builds use the supported Webpack fallback described below.
+- [ ] Historical peak-hour data and calibrated regional OD/volume/capacity inputs remain future work; current snapshots plus inferred load do not establish a calibrated future forecast.
+
+### Earlier implementation history (replay UI replaced)
+
+- [x] Independent directed OSM network artifact for Bukit Raja: 1,979 segments, 10 reported components; node connectivity, mapped one-way/access restrictions, basic turn restrictions and online preparation with official OSM fallback. Existing flood bundle unchanged.
+- [x] Pure deterministic traffic engine, seeded synthetic OD demand, point queues and shared junction budgets; worker-based three-scenario comparison, timeline playback, queue colours, road inspection and explicit assumptions.
+- [x] Traffic development drawing, housing/commercial trip rates, suggested existing-node access with override, trip-reduction and road-capacity mitigations; local draft save/load.
+- [x] Validation: 54 tests pass, lint and TypeScript pass; browser baseline, site drawing/access, existing/developed/mitigated comparison, timeline, saves and mobile layout inspected. Baseline benchmark including anchor selection ~1.1 s for 1,979 segments / 630 trips. Production build passes using `npm run build -- --webpack`; default Turbopack build fails here before compiler helper connection (exit 0), with the same failure across Node runtimes.
+- [ ] Later plan stages: boundary portals, access-segment insertion, per-road attribute overrides, full conditional/via-way restrictions, barrier handling, measured demand calibration, upstream spillback, second access, journey explorer and flood coupling.
+
 ## Submission wrap-up
+
+- [x] 19 Oct: documented proposed traffic simulation and development-impact implementation in `docs/traffic-implementation-plan.md`; planning only, traffic implementation has not started.
 
 - [x] 19 Oct: swapped township and mode navigation positions; compact sidebar mode tabs, expanding map township picker with current location label, hover/focus previews, scrollable downloaded locations and download action; responsive list layout
 - [x] 18 Oct: map-centered expanding mode navigation replaces sidebar tabs; animated label entrance, hover/focus dashes and image crossfades, keyboard selection/Escape, reduced-motion support; licensed replaceable local stock images

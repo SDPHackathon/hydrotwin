@@ -16,6 +16,8 @@ SDP Hackathon T&C cl. 14: everything we use must be lawfully obtained and licens
 
 | Name | Used for | Licence / terms | Attribution |
 |---|---|---|---|
+| TomTom Traffic Flow Segment Data API | Current road speed/free-flow speed, travel time, closure flag and confidence for township-impact screening | Proprietary TomTom API content, subject to account entitlement, API terms and [terms](https://docs.tomtom.com/legal/terms-and-conditions); retrieved on demand, retained in browser memory only and treated as stale after 5 minutes | Traffic © TomTom in the workspace; [API reference](https://docs.tomtom.com/traffic-api/documentation/tomtom-maps/v1/traffic-flow/flow-segment-data). No Google data or map replacement. |
+| OpenStreetMap official map API and Overpass | Independent directed traffic network; Bukit Raja artifact retrieved 19 Oct 2026 | ODbL 1.0; https://www.openstreetmap.org/copyright | © OpenStreetMap contributors · shown in Traffic footer; directions and attributes remain incomplete; demand/capacity are our stated assumptions |
 | OpenStreetMap (via Overpass API) | streets + buildings of Bandar Bukit Raja | ODbL 1.0 | "© OpenStreetMap contributors" — shown on the map (dashboard) and under the route map (guard page) |
 | OpenFreeMap | base map tiles + style (positron) | free, no key; tiles built from OSM (ODbL) with the OpenMapTiles schema | shown on the map (dashboard) and under the route map (guard page) |
 | Open-Meteo Elevation API | ground height of each drain zone (baked once into `drains.json`) | data CC BY 4.0; underlying DEM: Copernicus GLO-90. ⚠️ Open-Meteo's free API is for non-commercial use — fine for a prototype; production → their commercial plan or the Copernicus DEM directly | footer + this file |

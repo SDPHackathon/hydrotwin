@@ -37,6 +37,16 @@ type Props = {
   siteAccessRoad?: string;
   siteDrainId?: string;
   onSitePick?: (point: SitePoint) => void;
+  trafficData?: GeoJSON.FeatureCollection;
+  onTrafficPick?: (id: string) => void;
+  sites?: Array<{
+    id: string;
+    name: string;
+    boundary: SitePoint[];
+    color?: string;
+    access?: string;
+    closed?: boolean;
+  }>;
 };
 
 const byStatus = (fallback: string) => [
@@ -78,6 +88,9 @@ export default function TownshipMap({
   siteAccessRoad,
   siteDrainId,
   onSitePick,
+  trafficData,
+  onTrafficPick,
+  sites,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
@@ -210,7 +223,7 @@ export default function TownshipMap({
         });
         m.addLayer({
           id: "route-point-labels", type: "symbol", source: "route-points",
-          layout: { "text-field": ["get", "label"], "text-size": 13, "text-allow-overlap": true },
+          layout: { "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 13, "text-allow-overlap": true },
           paint: { "text-color": "#ffffff" },
         });
 
@@ -375,9 +388,9 @@ export default function TownshipMap({
 
         m.addSource("development-site", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         const firstLabel = m.getStyle().layers.find(layer => layer.type === "symbol")?.id;
-        m.addLayer({ id: "development-fill", type: "fill", source: "development-site", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": "#6366f1", "fill-opacity": 0.16 } }, firstLabel);
-        m.addLayer({ id: "development-outline", type: "line", source: "development-site", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#4f46e5", "line-width": 3, "line-dasharray": [2, 1] } });
-        m.addLayer({ id: "development-corners", type: "circle", source: "development-site", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5, "circle-color": "#ffffff", "circle-stroke-color": "#4f46e5", "circle-stroke-width": 2 } });
+        m.addLayer({ id: "development-fill", type: "fill", source: "development-site", filter: ["==", ["geometry-type"], "Polygon"], paint: { "fill-color": ["coalesce", ["get", "color"], "#6366f1"], "fill-opacity": 0.2 } }, firstLabel);
+        m.addLayer({ id: "development-outline", type: "line", source: "development-site", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": ["coalesce", ["get", "color"], "#4f46e5"], "line-width": 3, "line-dasharray": [2, 1] } });
+        m.addLayer({ id: "development-corners", type: "circle", source: "development-site", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5, "circle-color": "#ffffff", "circle-stroke-color": ["coalesce", ["get", "color"], "#4f46e5"], "circle-stroke-width": 2 } });
         m.addSource("development-access", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         m.addLayer({ id: "development-access-casing", type: "line", source: "development-access", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 11 } });
         m.addLayer({ id: "development-access-line", type: "line", source: "development-access", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": DEVELOPMENT_ACCESS_COLOR, "line-width": 6 } });
@@ -398,13 +411,36 @@ export default function TownshipMap({
   useEffect(() => {
     const m = map.current;
     if (!ready || !m) return;
+    if (sites && sites.length > 0) {
+      const features: GeoJSON.Feature[] = [];
+      const accessFeatures: GeoJSON.Feature[] = [];
+      for (const s of sites) {
+        const points = s.boundary ?? [];
+        const color = s.color || "#4f46e5";
+        for (const coordinates of points) {
+          features.push({ type: "Feature", properties: { color, id: s.id }, geometry: { type: "Point", coordinates } });
+        }
+        if (points.length >= 3 && s.closed !== false) {
+          features.unshift({ type: "Feature", properties: { color, id: s.id }, geometry: { type: "Polygon", coordinates: [[...points, points[0]]] } });
+        } else if (points.length >= 2) {
+          features.unshift({ type: "Feature", properties: { color, id: s.id }, geometry: { type: "LineString", coordinates: points } });
+        }
+        if (s.access) {
+          const match = streets.features.find(st => st.properties.id === s.access);
+          if (match) accessFeatures.push(match);
+        }
+      }
+      m.getSource<GeoJSONSource>("development-site")?.setData({ type: "FeatureCollection", features });
+      m.getSource<GeoJSONSource>("development-access")?.setData({ type: "FeatureCollection", features: accessFeatures });
+      return;
+    }
     const points = siteBoundary ?? [];
     const features: GeoJSON.Feature[] = points.map(coordinates => ({ type: "Feature", properties: {}, geometry: { type: "Point", coordinates } }));
     if (points.length >= 3 && siteClosed) features.unshift({ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [[...points, points[0]]] } });
     else if (points.length >= 2) features.unshift({ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: points } });
     m.getSource<GeoJSONSource>("development-site")?.setData({ type: "FeatureCollection", features });
     m.getSource<GeoJSONSource>("development-access")?.setData({ type: "FeatureCollection", features: streets.features.filter(s => s.properties.id === siteAccessRoad) });
-  }, [ready, siteBoundary, siteClosed, siteAccessRoad, streets]);
+  }, [ready, siteBoundary, siteClosed, siteAccessRoad, streets, sites]);
 
   // Drains changed (e.g. township switch) → refresh the points in place.
   useEffect(() => {
@@ -488,5 +524,22 @@ export default function TownshipMap({
   }, [ready, statuses, streets, drains]);
 
   const flowDrain = siteDrainId ? drains.find(drain => drain.id === siteDrainId) : undefined;
+  useEffect(() => {
+    const m=map.current;
+    if(!ready || !m || !trafficData) return;
+    if(!m.getSource('traffic')) {
+      m.addSource('traffic',{type:'geojson',data:trafficData});
+      m.addLayer({id:'traffic-casing',type:'line',source:'traffic',paint:{'line-color':'#ffffff','line-width':['coalesce',['get','casingWidth'],8],'line-offset':3}});
+      m.addLayer({id:'traffic-roads',type:'line',source:'traffic',paint:{'line-color':['get','color'],'line-width':['coalesce',['get','width'],4],'line-offset':3}});
+      m.addLayer({id:'traffic-direction',type:'symbol',source:'traffic',layout:{'symbol-placement':'line','symbol-spacing':100,'text-field':'>','text-font':['Noto Sans Regular'],'text-size':18,'text-keep-upright':false,'text-rotation-alignment':'map'},paint:{'text-color':'#ffffff','text-halo-color':['get','color'],'text-halo-width':1}});
+    } else m.getSource<GeoJSONSource>('traffic')?.setData(trafficData);
+  },[ready,trafficData]);
+  useEffect(()=>{
+    const m=map.current;
+    if(!ready || !m || !trafficData || !onTrafficPick) return;
+    const click=(e:import('maplibre-gl').MapLayerMouseEvent)=>{const id=e.features?.[0]?.properties?.id;if(id) onTrafficPick(id);};
+    m.on('click','traffic-roads',click);
+    return ()=>{m.off('click','traffic-roads',click);};
+  },[ready,trafficData,onTrafficPick]);
   return <div className="relative h-full min-h-0 w-full"><div ref={container} className="h-full w-full" />{ready && flowMap && siteClosed && siteBoundary && siteBoundary.length >= 3 && flowDrain && <DevelopmentFlowOverlay map={flowMap} boundary={siteBoundary} drain={flowDrain} />}{siteCaption && <div className="pointer-events-none absolute bottom-16 left-3 right-3 max-w-lg rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs text-stone-800 shadow-sm"><strong>Development scenario</strong><br />{siteCaption}<br /><span className="text-stone-500">Indigo: proposed site · dark line with white outline: selected access road. Zone street depths only.</span></div>}</div>;
 }

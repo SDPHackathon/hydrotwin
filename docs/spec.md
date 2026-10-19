@@ -52,7 +52,13 @@ The 5-minute video (due with the submission, 23 Oct 11:59 PM) follows this story
 
 ## Out of scope
 
-Detailed building / road layout editing and zoning approvals, traffic simulation, real hydraulics, hardware, Google or Cesium map tiles. Site-level development screening is included as the scoped extension below.
+Detailed building / road layout editing and zoning approvals, real hydraulics, hardware, Google or Cesium map tiles. Site-level development screening and the scoped traffic extension below are included.
+
+## Traffic screening (19 Oct scope extension)
+
+The dashboard offers Flood / Traffic on the existing MapLibre map. The traffic workspace is a township-impact planner: draw a housing/commercial site, enter homes or gross floor area, accept/adjust the suggested existing-road connection and click Assess township impact. A server-only TomTom integration retrieves current traffic on surrounding candidate corridors. The impact engine assigns additional trips in ten batches, allowing later trips to use alternatives as estimated costs change. Compare Current traffic / With township directly on the map and inspect additional vehicles/hour and estimated extra road-traversal time. No scenario replay, synthetic background-demand controls or timeline appears in this workflow.
+
+Bukit Raja has a prepared independent OSM road network; other areas attempt OSM enrichment. Current speeds/free-flow speeds/closure flags come from TomTom where matched by geometry and direction. Road capacities, development trip rates, surrounding destination shares and the inferred relationship between speed and demand remain explicit assumptions. A BPR-style sensitivity curve uses observed speeds as its starting point; it does not measure existing traffic volume or establish a calibrated forecast. Missing, stale, low-confidence and unmatched traffic stays unknown/grey. Coverage is weighted by assigned travel distance and shown with the result; incomplete coverage cannot establish absence of wider congestion. No key or provider failure produces no fabricated baseline. Historical peak data, regional OD calibration, physical queue lengths, junction signal models, spillback, new roads and flood coupling are future work. Proposals save inputs only; live content is not persisted.
 
 ## Development screening (18 Oct scope extension)
 

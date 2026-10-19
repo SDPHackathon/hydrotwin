@@ -8,6 +8,7 @@ import TownshipMap from "@/components/TownshipMap";
 import MapTownshipNavigation from "@/components/MapTownshipNavigation";
 import EvacuationPanel from "@/components/EvacuationPanel";
 import DevelopmentPanel from "@/components/DevelopmentPanel";
+import TrafficWorkspace from "@/components/TrafficWorkspace";
 import { developmentError, evaluateDevelopment, newDevelopment, DEVELOPMENT_LABELS, type DevelopmentStage } from "@/lib/engine/development";
 import type { Area, Streets } from "@/lib/area";
 import { STATUS_COLOR } from "@/lib/colors";
@@ -74,6 +75,7 @@ function DashboardView({
 }: DashboardViewProps) {
   // Mode: "live" (Realtime / local simulation), "plan" (Plan mode civil fixes), or "route" (Evacuation Safe Routes)
   const [mode, setMode] = useState<"live" | "plan" | "route">("live");
+  const [domain, setDomain] = useState<'flood'|'traffic'>('flood');
   const [modePhase, setModePhase] = useState<"idle" | "leaving" | "entering">("idle");
   const modeTimers = useRef<number[]>([]);
 
@@ -360,6 +362,8 @@ function DashboardView({
     return [];
   }, [mode, simulationScenario, interventions]);
 
+  if(domain === 'traffic') return <TrafficWorkspace key={currentArea.slug} area={currentArea} buildings={currentBuildings} townships={[...areas,...localTownships.filter(t=>!areas.some(a=>a.slug===t.slug)).map(t=>({...t,custom:true}))]} onSelect={onSelectArea} onDownload={onOpenModal} onFlood={()=>setDomain('flood')} />;
+
   return (
     <div className="grid h-dvh overflow-hidden grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_390px] lg:grid-rows-[minmax(0,1fr)]">
       <div className="relative min-h-0 min-w-0">
@@ -406,6 +410,7 @@ function DashboardView({
             <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">Workspace</span>
             <button type="button" onClick={() => setMobileModalOpen(true)} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">📱 Phone Links</button>
           </div>
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-stone-100 p-1 text-xs" aria-label="Analysis domain"><button aria-pressed="true" className="rounded-md bg-white px-3 py-2 font-semibold text-emerald-700 shadow-sm">Flood</button><button className="rounded-md px-3 py-2 text-stone-600 hover:bg-white" onClick={()=>{storm.pause();setDomain('traffic');}}>Traffic</button></div>
           <nav className="dashboard-mode-tabs" aria-label="Dashboard modes">
             {([
               { id: "live", label: "Live Warning", path: "M3 12h4l3-8 4 16 3-8h4" },
