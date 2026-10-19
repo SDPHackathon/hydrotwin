@@ -2,7 +2,8 @@
 // (copied into src/data by scripts/copy-data.mjs).
 import streetsGeo from "../data/streets.json";
 import buildingsGeo from "../data/buildings.json";
-import type { LngLat } from "./geo";
+import drainsData from "../data/drains.json";
+import { boundsOf, centroid, fitProjector, pathD, type Box, type LngLat, type Projector } from "./geo";
 
 type StreetFeature = {
   properties: { id: string; name?: string | null; highway?: string | null; drain_id?: string | null };
@@ -29,3 +30,28 @@ export const buildings: LngLat[][] = (buildingsGeo as unknown as { features: Bui
     ? [(f.geometry.coordinates as LngLat[][])[0]]
     : (f.geometry.coordinates as LngLat[][][]).map((poly) => poly[0]),
 );
+
+export type Drain = { id: string; lng: number; lat: number; catchment: number };
+
+export const drains: Drain[] = (drainsData as { id: string; lng: number; lat: number; catchment_factor: number }[]).map(
+  (d) => ({ id: d.id, lng: d.lng, lat: d.lat, catchment: d.catchment_factor }),
+);
+
+export const streetBounds = boundsOf(streets.map((s) => s.line));
+
+// Line weight by road class.
+export const strokeFor = (highway: string) =>
+  ["trunk", "primary", "secondary"].includes(highway) ? 3 : highway === "tertiary" ? 2.2 : 1.5;
+
+// A ready-to-draw town for a given screen box: every street and building as an SVG path.
+export function drawTown(box: Box) {
+  const project: Projector = fitProjector(streetBounds, box);
+  return {
+    project,
+    streets: streets.map((s) => ({ ...s, d: pathD(s.line, project), c: centroid([s.line], project) })),
+    buildings: buildings.map((b) => `${pathD(b, project)}Z`),
+    drains: drains.map((d) => ({ ...d, p: project([d.lng, d.lat]) })),
+  };
+}
+
+export type Town = ReturnType<typeof drawTown>;
