@@ -19,28 +19,31 @@ const STEPS = [
 
 export const S07_DURATION = sec(32.2);
 
-const SCALE = 1.1;
-const PW = 390 * SCALE;
-const PH = 844 * SCALE;
+const SCALE = 1.06;
+const PW = Math.round(390 * SCALE);
+const PH = Math.round(844 * SCALE);
+const BEZEL = 12;
 
+// The bezel sits around the screen (content-box), so the recording is never cropped.
 const Phone: React.FC<{ src: string; x: number; label: string }> = ({ src, x, label }) => (
   <>
     <div
       style={{
         position: "absolute",
         left: x,
-        top: 58,
+        top: 60,
         width: PW,
         height: PH,
-        border: `12px solid ${C.ink}`,
+        boxSizing: "content-box",
+        border: `${BEZEL}px solid ${C.ink}`,
         borderRadius: 56,
         overflow: "hidden",
         background: "#fff",
       }}
     >
-      <Clip src={src} from={0} to={32.2} style={{ width: PW, height: PH }} />
+      <Clip src={src} from={0} to={32.2} style={{ display: "block", width: PW, height: PH }} />
     </div>
-    <div style={{ position: "absolute", left: x, top: 58 + PH + 34, width: PW + 24, textAlign: "center", fontSize: 26, color: C.ink, opacity: 0.7 }}>
+    <div style={{ position: "absolute", left: x, top: 60 + PH + 2 * BEZEL + 26, width: PW + 2 * BEZEL, textAlign: "center", fontSize: 26, color: C.ink, opacity: 0.7 }}>
       {label}
     </div>
   </>
@@ -70,8 +73,8 @@ export const S07Help: React.FC = () => {
           </div>
         ))}
       </div>
-      <Phone src="s07-resident.mp4" x={1000} label="Resident phone" />
-      <Phone src="s07-guard.mp4" x={1462} label="Guard phone" />
+      <Phone src="s07-resident.mp4" x={984} label="Resident phone" />
+      <Phone src="s07-guard.mp4" x={1446} label="Guard phone" />
       <Credits
         left="Recorded from the working prototype. Residents and guards are fictional."
         color={C.ink}

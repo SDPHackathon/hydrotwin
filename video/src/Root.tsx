@@ -11,6 +11,7 @@ import { S08Routes, S08_DURATION } from "./scenes/S08Routes";
 import { S09Plan, S09_DURATION } from "./scenes/S09Plan";
 import { S10Impact, S10_DURATION } from "./scenes/S10Impact";
 import { S11EndCard, S11_DURATION } from "./scenes/S11EndCard";
+import { Soundtrack } from "./components/Soundtrack";
 import { FPS, H, W } from "./tokens";
 
 // One composition per scene (fast to preview on its own) + the full film.
@@ -29,14 +30,27 @@ const scenes = [
   { id: "S11-EndCard", component: S11EndCard, duration: S11_DURATION },
 ];
 
+// Frame each scene starts at in the film.
+const startOf = (id: string) => {
+  let t = 0;
+  for (const s of scenes) {
+    if (s.id === id) return t;
+    t += s.duration;
+  }
+  throw new Error(`unknown scene ${id}`);
+};
+
 const Film: React.FC = () => (
-  <Series>
-    {scenes.map((s) => (
-      <Series.Sequence key={s.id} durationInFrames={s.duration}>
-        <s.component />
-      </Series.Sequence>
-    ))}
-  </Series>
+  <>
+    <Series>
+      {scenes.map((s) => (
+        <Series.Sequence key={s.id} durationInFrames={s.duration}>
+          <s.component />
+        </Series.Sequence>
+      ))}
+    </Series>
+    <Soundtrack lightAt={startOf("S04-Title")} />
+  </>
 );
 
 export const Root: React.FC = () => (
