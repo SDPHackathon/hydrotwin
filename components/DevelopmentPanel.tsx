@@ -3,6 +3,7 @@
 import { useMemo, useState, useSyncExternalStore } from "react";
 import type { Area, Streets } from "@/lib/area";
 import type { Drain } from "@/lib/engine/types";
+import { DEVELOPMENT_ACCESS_COLOR } from "@/lib/colors";
 import {
   boundaryError, DEVELOPMENT_LABELS, DEVELOPMENT_MODEL, DEVELOPMENT_STAGES,
   developmentError, evaluateDevelopment, parseDevelopments, siteAreaHa, suggestDevelopmentConnections,
@@ -102,6 +103,7 @@ export default function DevelopmentPanel({ area, drains, streets, draft, onChang
         <option value="">Choose an existing road</option>{streets.features.map(s => <option key={s.properties.id} value={s.properties.id}>{s.properties.name || s.properties.id} · {s.properties.drain_id}</option>)}
       </select></label>
       <p className="text-xs text-stone-500">The nearest mapped road is suggested automatically. You can choose a different access road.</p>
+      {draft.access_street_id && <p className="flex items-center gap-2 text-xs text-stone-600"><span aria-hidden="true" className="inline-block h-1.5 w-8 rounded-full ring-2 ring-white shadow-sm" style={{ background: DEVELOPMENT_ACCESS_COLOR }} />Selected access road · dark line with white outline</p>}
       {accessZone && accessZone !== draft.drain_id && <p className="text-xs text-amber-800">Access is in {accessZone}; development changes only {draft.drain_id}. Cross-zone water movement is not modelled.</p>}
       <label className="block text-xs">Mitigation for the receiving zone<select className={`${field} mt-1`} value={draft.mitigation} onChange={e => update({ mitigation: e.target.value as DevelopmentDraft["mitigation"] })}>
         <option value="none">None</option><option value="bigger_drain">Bigger drain · assumed outflow ×1.5</option><option value="retention_pond">Retention pond · assumed inflow ×0.6</option>

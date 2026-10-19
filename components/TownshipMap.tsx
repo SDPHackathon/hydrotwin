@@ -9,11 +9,12 @@ import type { GeoJSONSource, Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import type { Area, Streets } from "@/lib/area";
 import type { Drain, DrainStatus, PlanIntervention } from "@/lib/engine/types";
-import { SAFE_ROUTE_COLOR, STATUS_COLOR, WATER_COLOR } from "@/lib/colors";
+import { DEVELOPMENT_ACCESS_COLOR, SAFE_ROUTE_COLOR, STATUS_COLOR, WATER_COLOR } from "@/lib/colors";
 import { makeInterventionsGeoJson } from "@/lib/interventions-geojson";
 import { slabHeights } from "@/lib/water";
 import type { RoadPoint } from "@/lib/engine/route";
 import type { SitePoint } from "@/lib/engine/development";
+import DevelopmentFlowOverlay from "@/components/DevelopmentFlowOverlay";
 
 const BASE_STYLE = "https://tiles.openfreemap.org/styles/positron";
 
@@ -34,6 +35,7 @@ type Props = {
   siteClosed?: boolean;
   siteCaption?: string;
   siteAccessRoad?: string;
+  siteDrainId?: string;
   onSitePick?: (point: SitePoint) => void;
 };
 
@@ -74,6 +76,7 @@ export default function TownshipMap({
   siteClosed,
   siteCaption,
   siteAccessRoad,
+  siteDrainId,
   onSitePick,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -97,6 +100,7 @@ export default function TownshipMap({
     onDrainClickRef.current = onDrainClick;
   }, [onDrainClick]);
   const [ready, setReady] = useState(false);
+  const [flowMap, setFlowMap] = useState<MapLibreMap | null>(null);
   // Interventions only change a drain's outflow/catchment, never its position → the map must not be
   // rebuilt when `drains` changes. The load handler reads this ref; a separate effect refreshes the source.
   const drainsRef = useRef(drains);
@@ -375,7 +379,9 @@ export default function TownshipMap({
         m.addLayer({ id: "development-outline", type: "line", source: "development-site", filter: ["!=", ["geometry-type"], "Point"], paint: { "line-color": "#4f46e5", "line-width": 3, "line-dasharray": [2, 1] } });
         m.addLayer({ id: "development-corners", type: "circle", source: "development-site", filter: ["==", ["geometry-type"], "Point"], paint: { "circle-radius": 5, "circle-color": "#ffffff", "circle-stroke-color": "#4f46e5", "circle-stroke-width": 2 } });
         m.addSource("development-access", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-        m.addLayer({ id: "development-access-line", type: "line", source: "development-access", paint: { "line-color": "#d946ef", "line-width": 5, "line-dasharray": [1, 1] } });
+        m.addLayer({ id: "development-access-casing", type: "line", source: "development-access", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": "#ffffff", "line-width": 11 } });
+        m.addLayer({ id: "development-access-line", type: "line", source: "development-access", layout: { "line-cap": "round", "line-join": "round" }, paint: { "line-color": DEVELOPMENT_ACCESS_COLOR, "line-width": 6 } });
+        setFlowMap(m);
         setReady(true);
       });
     })();
@@ -383,6 +389,7 @@ export default function TownshipMap({
     return () => {
       cancelled = true;
       setReady(false);
+      setFlowMap(null);
       map.current?.remove();
       map.current = null;
     };
@@ -480,5 +487,6 @@ export default function TownshipMap({
     m.getSource<GeoJSONSource>("flood-zones")?.updateData({ update });
   }, [ready, statuses, streets, drains]);
 
-  return <div className="relative h-full min-h-0 w-full"><div ref={container} className="h-full w-full" />{siteCaption && <div className="pointer-events-none absolute bottom-16 left-3 right-3 max-w-lg rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs text-stone-800 shadow-sm"><strong>Development scenario</strong><br />{siteCaption}<br /><span className="text-stone-500">Indigo: proposed site · magenta: selected access road. Zone street depths only.</span></div>}</div>;
+  const flowDrain = siteDrainId ? drains.find(drain => drain.id === siteDrainId) : undefined;
+  return <div className="relative h-full min-h-0 w-full"><div ref={container} className="h-full w-full" />{ready && flowMap && siteClosed && siteBoundary && siteBoundary.length >= 3 && flowDrain && <DevelopmentFlowOverlay map={flowMap} boundary={siteBoundary} drain={flowDrain} />}{siteCaption && <div className="pointer-events-none absolute bottom-16 left-3 right-3 max-w-lg rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs text-stone-800 shadow-sm"><strong>Development scenario</strong><br />{siteCaption}<br /><span className="text-stone-500">Indigo: proposed site · dark line with white outline: selected access road. Zone street depths only.</span></div>}</div>;
 }

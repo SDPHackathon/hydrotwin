@@ -22,7 +22,7 @@ The township data is already in `public/data/bukit-raja/`; `npm run data` rebuil
 
 ## How it works
 
-Switch between Live Warning, Plan Mode and Safe Routes using the droplet/menu control centered above the map. It expands into mode links with stock preview photographs; hover or keyboard focus changes the preview. Escape or clicking outside closes it. Replace `public/images/navigation/live.jpg`, `plan.jpg` and `route.jpg` with your own images using the same filenames; update credits in `docs/third-party.md` and alt text in `components/MapModeNavigation.tsx` when replacing them.
+Switch between Live Warning, Plan Mode and Safe Routes using the compact icon tabs at the top of the sidebar. Mode changes briefly blur the map and panel before bringing the new view into focus. The township control centered above the map shows the current location and expands into a scrollable township list with stock preview photographs; hover or keyboard focus changes the preview. Escape or clicking outside closes it. Downloaded townships appear in the same list, and its download button opens the township downloader. On small screens the list fills the menu and previews are hidden. Replace `public/images/navigation/live.jpg`, `plan.jpg` and `route.jpg` with your own images using the same filenames; update credits in `docs/third-party.md` and the preview mapping in `components/MapTownshipNavigation.tsx` when replacing them.
 
 ```
 drain sensors (simulated) → risk engine → street status → map · resident alerts · guard check-list
@@ -66,3 +66,5 @@ Safe Routes uses user-designated safe destinations saved per township on this de
 ## Team
 
 *(names — add before submission)*
+
+New development previews show moving teal arrows from the site to the selected receiving drain zone. The label marks this as an assumed runoff direction: the straight connection is schematic and does not model terrain gradients, pipe alignments or actual water velocity. Arrows remain static when reduced motion is enabled.

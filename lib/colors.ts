@@ -10,3 +10,6 @@ export const WATER_COLOR = "#2563eb";
 
 // Keep route guidance visually separate from the green, amber, and red road statuses.
 export const SAFE_ROUTE_COLOR = "#7c3aed";
+
+// Draw with a white casing to stay visible over road statuses and blue water.
+export const DEVELOPMENT_ACCESS_COLOR = "#111827";

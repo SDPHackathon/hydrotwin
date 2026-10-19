@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import AddTownshipModal from "@/components/AddTownshipModal";
 import MobileLinksModal from "@/components/MobileLinksModal";
 import TownshipMap from "@/components/TownshipMap";
-import MapModeNavigation from "@/components/MapModeNavigation";
+import MapTownshipNavigation from "@/components/MapTownshipNavigation";
 import EvacuationPanel from "@/components/EvacuationPanel";
 import DevelopmentPanel from "@/components/DevelopmentPanel";
 import { developmentError, evaluateDevelopment, newDevelopment, DEVELOPMENT_LABELS, type DevelopmentStage } from "@/lib/engine/development";
@@ -376,6 +376,7 @@ function DashboardView({
         siteClosed={developmentActive && !drawingSite}
         siteCaption={developmentActive ? (developmentResult ? `${DEVELOPMENT_LABELS[developmentStage]} · each zone at its own peak` : "Draw site and complete inputs · no scenario preview yet") : undefined}
         siteAccessRoad={developmentActive ? development.access_street_id : undefined}
+        siteDrainId={developmentActive && developmentResult ? development.drain_id : undefined}
         onSitePick={developmentActive && drawingSite ? (point) => setDevelopment(prev => prev.boundary.length >= 50 ? prev : { ...prev, boundary: [...prev.boundary, point] }) : undefined}
         safeRoute={mode === "route" ? safeRouteResult?.coordinates : null}
         routeOrigin={mode === "route" ? safeRouteResult?.origin : null}
@@ -388,7 +389,7 @@ function DashboardView({
         }}
       />
       </div>
-      <MapModeNavigation mode={mode} onChange={changeMode} />
+      <MapTownshipNavigation current={currentArea} townships={[...areas, ...localTownships.filter(item => !areas.some(area => area.slug === item.slug)).map(item => ({ ...item, custom: true }))]} onSelect={onSelectArea} onDownload={onOpenModal} />
       </div>
 
       <aside className="dashboard-mode-surface flex max-h-[50dvh] flex-col gap-5 overflow-y-auto border-stone-200 bg-white p-5 lg:max-h-none lg:border-l" data-mode-phase={modePhase}>
@@ -401,60 +402,20 @@ function DashboardView({
             </span>
           </div>
 
-          {/* Township Location Selector */}
-          <div>
-            <div className="flex items-center justify-between">
-              <label htmlFor="area-select" className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                Township Location
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setMobileModalOpen(true)}
-                  className="text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-md px-2 py-0.5 transition flex items-center gap-1"
-                >
-                  <span>📱</span> Phone Links
-                </button>
-                <button
-                  type="button"
-                  onClick={onOpenModal}
-                  className="text-xs font-semibold text-stone-900 hover:underline"
-                >
-                  + Download new
-                </button>
-              </div>
-            </div>
-            <div className="relative mt-1">
-              <select
-                id="area-select"
-                value={currentArea.slug}
-                onChange={(e) => onSelectArea(e.target.value)}
-                className="w-full appearance-none rounded-lg border border-stone-300 bg-stone-50 px-3 py-2 pr-8 text-sm font-medium text-stone-900 shadow-sm transition hover:bg-stone-100 focus:border-stone-900 focus:bg-white focus:outline-none"
-              >
-                <optgroup label="Pre-bundled Townships">
-                  {areas.map((a) => (
-                    <option key={a.slug} value={a.slug}>
-                      {a.name}
-                    </option>
-                  ))}
-                </optgroup>
-                {localTownships.length > 0 && (
-                  <optgroup label="Downloaded on this Device">
-                    {localTownships.map((t) => (
-                      <option key={t.slug} value={t.slug}>
-                        {t.name} (Custom)
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-stone-500">
-                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">Workspace</span>
+            <button type="button" onClick={() => setMobileModalOpen(true)} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">📱 Phone Links</button>
           </div>
+          <nav className="dashboard-mode-tabs" aria-label="Dashboard modes">
+            {([
+              { id: "live", label: "Live Warning", path: "M3 12h4l3-8 4 16 3-8h4" },
+              { id: "plan", label: "Plan Mode", path: "M4 4h16v16H4z M8 4v5 M13 4v3 M20 9h-5 M4 15h5v5" },
+              { id: "route", label: "Safe Routes", path: "M5 19V9a4 4 0 0 1 4-4h10 M15 1l4 4-4 4 M2 19a3 3 0 1 0 6 0a3 3 0 1 0-6 0" },
+            ] as const).map(item => <button key={item.id} type="button" aria-pressed={mode === item.id} onClick={() => changeMode(item.id)}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={item.path} /></svg>
+              <span>{item.label}</span>
+            </button>)}
+          </nav>
 
         </header>
 

@@ -55,8 +55,11 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 
 ## Submission wrap-up
 
+- [x] 19 Oct: swapped township and mode navigation positions; compact sidebar mode tabs, expanding map township picker with current location label, hover/focus previews, scrollable downloaded locations and download action; responsive list layout
 - [x] 18 Oct: map-centered expanding mode navigation replaces sidebar tabs; animated label entrance, hover/focus dashes and image crossfades, keyboard selection/Escape, reduced-motion support; licensed replaceable local stock images
 - [x] 19 Oct: mode switches blur the map and panel before changing content, then sharpen; styles imported directly by Dashboard to fix stale development CSS; captured intermediate blur for all three top-center tabs on localhost:3000 and verified return to clear
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)
 - [ ] 22 Oct: full run-through · README final · AI-use log + third-party list complete · repo public
 - [ ] 23 Oct: Danish submits
+- [x] 19 Oct: development access road uses a solid near-black line with white casing and matching legend for contrast against status roads and water; verified on localhost:3000 after map reload.
+- [x] 19 Oct: completed development sites show labelled, infinitely moving runoff arrows toward the selected simulated drain zone; schematic connection, with static arrows for reduced motion.
