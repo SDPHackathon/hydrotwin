@@ -77,7 +77,6 @@ export default function DevelopmentPanel({ area, drains, streets, draft, onChang
       <label className="block text-xs">Development type<select className={`${field} mt-1`} value={draft.kind} onChange={e => update({ kind: e.target.value as DevelopmentDraft["kind"], proposed_paved_pct: e.target.value === "housing" ? 60 : 85 })}>
         <option value="housing">Housing</option><option value="commercial">Commercial</option>
       </select></label>
-      <p className="text-xs text-stone-500">Changing type applies an editable paving preset: housing 60%, commercial 85%.</p>
       <div className="flex flex-wrap gap-2">
         <button className={button} onClick={() => { update({ boundary: [] }); onDrawing(true); }}>Draw new site</button>
         {drawing && <>
@@ -91,24 +90,20 @@ export default function DevelopmentPanel({ area, drains, streets, draft, onChang
     <section className="space-y-3 rounded-xl border border-stone-200 p-3">
       <h3 className="text-sm font-semibold">2. Set drainage and land cover</h3>
       <label className="block text-xs">Receiving drain zone<select className={`${field} mt-1`} value={draft.drain_id} onChange={e => update({ drain_id: e.target.value })}>{drains.map(d => <option key={d.id} value={d.id}>{d.id} · {d.name}</option>)}</select></label>
-      <p className="text-xs text-stone-500">Uses the same street groups as Live Warning. Finishing the boundary suggests the zone of the road nearest the site’s outline centre. You can change it here or click a drain on the map.</p>
       <button className={button} disabled={!suggestion || drawing} onClick={applySuggestions}>Use suggested zone and road</button>
       {suggestion && !drawing && <p className="text-xs text-stone-500">Suggested zone: {suggestion.drain_id}. Your selected zone: {draft.drain_id}. Proximity is an estimate of the connection.</p>}
       {(["existing_paved_pct", "proposed_paved_pct"] as const).map((key, i) => <label key={key} className="block text-xs">
         {i === 0 ? "Before construction" : "After construction"} buildings and paving: <strong>{draft[key]}%</strong> · permeable: {100 - draft[key]}%
         <input className="mt-2 w-full accent-indigo-600" type="range" min={0} max={100} value={draft[key]} onChange={e => update({ [key]: Number(e.target.value) })} />
       </label>)}
-      <p className="text-xs text-stone-500">Both percentages apply only to your drawn site. Before is the estimated current cover; after is the planned total cover.</p>
       <label className="block text-xs">Proposed access road<select className={`${field} mt-1`} value={draft.access_street_id} onChange={e => update({ access_street_id: e.target.value })}>
         <option value="">Choose an existing road</option>{streets.features.map(s => <option key={s.properties.id} value={s.properties.id}>{s.properties.name || s.properties.id} · {s.properties.drain_id}</option>)}
       </select></label>
-      <p className="text-xs text-stone-500">The nearest mapped road is suggested automatically. You can choose a different access road.</p>
       {draft.access_street_id && <p className="flex items-center gap-2 text-xs text-stone-600"><span aria-hidden="true" className="inline-block h-1.5 w-8 rounded-full ring-2 ring-white shadow-sm" style={{ background: DEVELOPMENT_ACCESS_COLOR }} />Selected access road · dark line with white outline</p>}
       {accessZone && accessZone !== draft.drain_id && <p className="text-xs text-amber-800">Access is in {accessZone}; development changes only {draft.drain_id}. Cross-zone water movement is not modelled.</p>}
       <label className="block text-xs">Mitigation for the receiving zone<select className={`${field} mt-1`} value={draft.mitigation} onChange={e => update({ mitigation: e.target.value as DevelopmentDraft["mitigation"] })}>
         <option value="none">None</option><option value="bigger_drain">Bigger drain · assumed outflow ×1.5</option><option value="retention_pond">Retention pond · assumed inflow ×0.6</option>
       </select></label>
-      <p className="text-xs text-stone-500">To test green space, reduce proposed paving. It is counted once through land cover.</p>
     </section>
     <section className="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-3">
       <h3 className="text-sm font-semibold">3. Compare the storm results</h3>

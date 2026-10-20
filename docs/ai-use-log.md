@@ -4,6 +4,7 @@ SDP Hackathon T&C cl. 13: material use of AI tools must be declared, and SDP may
 
 | Date | Who | Tool | What for | Which part |
 |---|---|---|---|---|
+| 2026-10-20 | Danish | Antigravity (Gemini 3.8 Flash) | Cleaned up verbose UI labels and explanatory copy across dashboard, development screening, and evacuation panels; aligned Phone Links button style with design system | components/Dashboard.tsx, components/DevelopmentPanel.tsx, components/EvacuationPanel.tsx, docs/ |
 | 2026-10-20 | Hurin | OpenAI Codex | Implemented map-contained synthetic rain, rainfall/playback visuals, pause/reset/reduced-motion behavior, shared local/phone weather presentation, controller freshness and natural completion; added presentation regression tests | components/StormRainOverlay.*, components/TownshipMap.tsx, components/Dashboard.tsx, app/control/page.tsx, lib/storm-presentation.ts, lib/server-state.ts, tests/storm-presentation.test.ts, README.md, docs/ |
 | 2026-10-19 | Hurin | OpenAI Codex | Read repository instructions, specs, contracts, progress, installed Next.js client guide and relevant skills; planned on-map demo rain with intensity/playback response and local/phone synchronization; no application implementation | docs/storm-rain-visualization-plan.md, docs/progress.md |
 | 2026-10-15 | Azim | Claude Code (Anthropic) | Repo setup: structure, agent rules, data script, engine + tests, dashboard map, database schema, docs | Whole repo at the first commit |

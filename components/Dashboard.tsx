@@ -421,14 +421,17 @@ function DashboardView({
         <header className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-semibold tracking-tight text-stone-900">HydroTwin</h1>
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
-              3D Digital Twin
-            </span>
           </div>
 
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">Workspace</span>
-            <button type="button" onClick={() => setMobileModalOpen(true)} className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100">📱 Phone Links</button>
+            <button
+              type="button"
+              onClick={() => setMobileModalOpen(true)}
+              className="rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 shadow-2xs transition hover:border-stone-400 hover:bg-stone-50"
+            >
+              Phone Links
+            </button>
           </div>
           <div className="grid grid-cols-2 gap-1 rounded-lg bg-stone-100 p-1 text-xs" aria-label="Analysis domain"><button aria-pressed="true" className="rounded-md bg-white px-3 py-2 font-semibold text-emerald-700 shadow-sm">Flood</button><button className="rounded-md px-3 py-2 text-stone-600 hover:bg-white" onClick={()=>{storm.pause();setDomain('traffic');}}>Traffic</button></div>
           <nav className="dashboard-mode-tabs" aria-label="Dashboard modes">
@@ -517,7 +520,7 @@ function DashboardView({
               <div className="flex items-center justify-between mb-2">
                 <div>
                   <span className="text-xs font-semibold uppercase tracking-wider text-stone-700">Watch Plan in Action (3D Map)</span>
-                  <p className="text-[11px] text-stone-500">Run storm simulation to see your upgrades perform live</p>
+
                 </div>
                 <div className="text-right">
                   <span className="font-mono text-sm font-bold text-stone-900">
@@ -799,11 +802,11 @@ function DashboardView({
             <div className="rounded-xl border border-stone-200 p-2.5 bg-stone-50 flex items-center justify-between text-xs">
               <div>
                 <span className="font-semibold text-stone-800">Drain Infrastructure:</span>
-                <p className="text-[10px] text-stone-500">
-                  {simulationScenario === "plan" && interventions.length > 0
-                    ? `Testing with ${interventions.length} active civil upgrades`
-                    : "Simulating default baseline drainage"}
-                </p>
+                {simulationScenario === "plan" && interventions.length > 0 && (
+                  <p className="text-[10px] text-stone-500">
+                    Testing with {interventions.length} active civil upgrades
+                  </p>
+                )}
               </div>
               <div className="flex rounded-md bg-stone-200 p-0.5 font-medium">
                 <button

@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { RouteDestination, RouteOutcome, RouteResult, StreetFeature } from "@/lib/engine/route";
 
 const messages: Record<RouteOutcome, string> = {
-  found: "Route found under current simulated road conditions",
+  found: "Route found",
   no_destinations: "No safe destinations configured. Add one below.",
   invalid_origin: "The starting street is missing from the loaded road data.",
   origin_blocked: "The starting street is flooded. No traversable exit is modeled from this origin.",
@@ -50,7 +50,6 @@ export default function EvacuationPanel(p: Props) {
   return <div className="flex flex-col gap-4 text-xs">
     <section className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4">
       <h2 className="font-semibold uppercase tracking-wider">Evacuation Route Finder</h2>
-      <p>Shortest walking route to a reachable safe destination. Routes update with road statuses; red and unknown roads are excluded. Amber roads may be used.</p>
       <div className="flex flex-wrap gap-2">
         <button className="rounded-lg border border-violet-300 px-3 py-2 text-violet-800" aria-pressed={p.pickMode === "origin"} onClick={() => p.onPickModeChange(p.pickMode === "origin" ? null : "origin")}>Pin starting point on map</button>
         <button className="rounded-lg border border-violet-300 px-3 py-2 text-violet-800" aria-pressed={p.pickMode === "destination"} onClick={() => p.onPickModeChange(p.pickMode === "destination" ? null : "destination")}>Pin safe destination on map</button>
@@ -70,19 +69,19 @@ export default function EvacuationPanel(p: Props) {
         </select>
       </label>
     </section>
-    {p.result && <section aria-live="polite" className={`space-y-2 rounded-xl border p-4 ${p.result.found ? "border-violet-300 bg-violet-50" : "border-amber-300 bg-amber-50"}`}>
-      <h3 className="font-semibold">{messages[p.result.outcome]}</h3>
+    {p.result && <section aria-live="polite" className={`space-y-1.5 rounded-xl border p-3.5 ${p.result.found ? "border-violet-300 bg-violet-50" : "border-amber-300 bg-amber-50"}`}>
+      <h3 className="font-semibold text-stone-900">{messages[p.result.outcome]}</h3>
       {p.result.found && <>
-        <p>{p.result.destination_name} · {p.result.distance_m} m · Approx. {Math.ceil(p.result.distance_m / 70)} min walk</p>
-        <p>Violet route · O = origin · D = destination</p>
-        {p.result.distance_m === 0 && <p>Already at the destination endpoint.</p>}
-        {p.result.uses_amber && <p>This route includes amber roads with elevated flood risk.</p>}
+        <p className="font-medium text-violet-950">{p.result.destination_name} · {p.result.distance_m} m ({Math.ceil(p.result.distance_m / 70)} min walk)</p>
+        {p.result.distance_m === 0 && <p className="text-stone-500">Already at the destination endpoint.</p>}
+        {p.result.uses_amber && <p className="text-amber-800">⚠️ Route includes amber roads</p>}
+        {(p.result.excluded_streets > 0 || p.result.unknown_streets > 0) && (
+          <p className="text-stone-500">Avoids {p.result.excluded_streets} flooded streets{p.result.unknown_streets > 0 ? `, ${p.result.unknown_streets} unverified` : ""}.</p>
+        )}
       </>}
-      <p>Excluded across the township: {p.result.excluded_streets} red streets, {p.result.unknown_streets} streets with unknown status.</p>
     </section>}
     <section className="space-y-3 rounded-xl border border-stone-200 p-4">
       <h3 className="font-semibold">Configure safe destinations</h3>
-      <p>These user-designated points are for the simulation. Their suitability as real evacuation sites has not been verified. Pin a point on the map, or add a street endpoint below.</p>
       <label className="block space-y-1"><span>Destination name</span>
         <input className={selectClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="Safe destination name" maxLength={80} />
       </label>
