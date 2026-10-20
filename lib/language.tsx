@@ -1,39 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useStoredValue } from "@/lib/useStoredValue";
 
 export type Language = "en" | "bm";
 
-const LANGUAGE_KEY = "hydrotwin_language";
+export function useLanguage(scope?: string) {
+  const key = scope ? `hydrotwin_language_${scope}` : "hydrotwin_language";
+  const [stored, setStored] = useStoredValue(key);
+  const language: Language = stored === "bm" ? "bm" : "en";
 
-export function useLanguage() {
-  const [language, setLanguage] = useState<Language>("en");
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem(LANGUAGE_KEY);
-
-    if (saved === "en" || saved === "bm") {
-      setLanguage(saved);
-    }
-
-    setReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (ready) {
-      localStorage.setItem(LANGUAGE_KEY, language);
-    }
-  }, [language, ready]);
+  const setLanguage = (next: Language) => {
+    setStored(next);
+  };
 
   const toggleLanguage = () => {
-    setLanguage((current) => (current === "en" ? "bm" : "en"));
+    setLanguage(language === "en" ? "bm" : "en");
   };
 
   return {
     language,
     setLanguage,
     toggleLanguage,
-    ready,
+    ready: true,
   };
 }

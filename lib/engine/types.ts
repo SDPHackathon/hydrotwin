@@ -46,8 +46,9 @@ export interface DemoResident {
   needs: string | null;
 }
 
-export type TaskState = "open" | "on_the_way" | "done";
+export type TaskState = "open" | "on_the_way" | "done" | "cancelled";
 export type HelpType = "trapped" | "medical" | "evacuate" | "water_in_house" | "other";
+export type TaskOutcome = "assisted_upstairs" | "evacuated" | "confirmed_safe" | "other";
 
 export interface GuardTask {
   id: string | number;
@@ -67,5 +68,7 @@ export interface GuardTask {
   accepted_at?: string | null;
   responder_name?: string | null;
   done_at?: string | null;
+  cancelled_at?: string | null;
+  outcome?: TaskOutcome | null;
+  outcome_note?: string | null;
 }
-

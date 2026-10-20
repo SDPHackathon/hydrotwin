@@ -58,24 +58,26 @@ The names here are the names in code, in the database and in the engine. Change 
 | `drain_status` | latest status per drain | **risk-engine function only** | everyone (Realtime) |
 | `residents` | **fictional** residents, `vulnerable`, `needs` | seed | guards |
 | `check_ins` | *I'm safe* / *I need help* + what for (`help_type`, `people`, `note`) | check-in API | guards (Realtime) |
-| `guard_tasks` | one live task per resident — opened at red for vulnerable residents, or by *I need help*; `open → on_the_way → done` | risk engine (open), guards (accept, resolve) | guards + the resident who called (Realtime) |
+| `guard_tasks` | one live task per resident — opened at red for vulnerable residents, or by *I need help*; `open → on_the_way → done \| cancelled` | risk engine (open), guards (accept, resolve), resident (cancel) | guards + the resident who called (Realtime) |
 | `plan_scenarios` | Plan-mode changes + results | plan page | everyone |
 
 RLS is on for every table. Clients only read; every write goes through the server with the service role, except a guard accepting or closing a task. The server's key is `SUPABASE_SERVICE_ROLE_KEY` (`.env.local`, server only); the demo-time public read/write policies are removed by `20261018234500_lock_public_writes.sql`.
 
 ## Call for help — `lib/engine/help.ts`
 
-A resident's *I need help* **is** a guard task. Tasks move `open → on_the_way → done`; `resolve` also works straight from `open`; a `done` task never reopens. One live task per resident (index `guard_tasks_one_open`); a second call while a task is live updates the ask and keeps the responding guard.
+A resident's *I need help* **is** a guard task. Tasks move `open → on_the_way → done | cancelled`; `resolve` and `cancel` also work straight from `open`; a `done` or `cancelled` task never reopens. One live task per resident (index `guard_tasks_one_open`); a second call while a task is live updates the ask and keeps the responding guard. Residents can cancel accidental requests with confirmation; guards select an outcome when resolving.
 
 | Field | Values |
 |---|---|
+| `state` | `open` · `on_the_way` · `done` · `cancelled` |
 | `help_type` | `trapped` · `medical` · `evacuate` · `water_in_house` · `other` (default) |
 | `people` | whole number 1–10 (default 1) |
 | `note` | ≤ 80 characters, trimmed; empty → null |
 | `accepted_at`, `responder_name` | set by *On my way* (`accept`); `responder_name` ≤ 40 characters — guards pick a display name, there is no guard login in the demo |
-| `done_at` | set by *Resolved* (`resolve`) |
+| `done_at`, `outcome`, `outcome_note` | set by *Resolved* (`resolve`); `outcome`: `assisted_upstairs` · `evacuated` · `confirmed_safe` · `other`; `outcome_note`: optional text ≤ 140 characters for 'other' |
+| `cancelled_at` | set by *Cancel request* (`cancel`) |
 
-Migration `20261018000000_help_loop.sql`. API: `POST /api/resident/check-in { resident_id, state, help_type?, people?, note? }` · `GET /api/guard-tasks?resident_id=…` (the resident follows their own task) · `POST /api/guard-tasks { taskId, action: "accept" | "resolve", responder }`.
+Migrations `20261018000000_help_loop.sql` and `20261021000000_task_cancel_and_outcome.sql`. API: `POST /api/resident/check-in { resident_id, state, help_type?, people?, note? }` · `GET /api/guard-tasks?resident_id=…` (the resident follows their own task) · `POST /api/guard-tasks { taskId, action: "accept" | "resolve" | "cancel", responder?, outcome?, outcome_note? }`.
 
 ### Responder route — `findResponderRoute()`
 

@@ -70,6 +70,75 @@ test("resolve works straight from open (guard arrived without tapping On my way)
   assert.ok(done.ok);
   assert.equal(done.task.state, "done");
   assert.equal(done.task.responder_name, "Guard Lim");
+  assert.equal(done.task.outcome, "other");
+});
+
+test("cancel moves open → cancelled with cancelled_at, without mutating the input", () => {
+  const result = applyTaskAction(openTask, "cancel", null, "2026-10-17T10:05:00Z");
+  assert.ok(result.ok);
+  assert.equal(result.task.state, "cancelled");
+  assert.equal(result.task.cancelled_at, "2026-10-17T10:05:00Z");
+  assert.equal(openTask.state, "open");
+});
+
+test("cancel moves on_the_way → cancelled and preserves the responding guard", () => {
+  const accepted = applyTaskAction(openTask, "accept", "Guard Rahim", "2026-10-17T10:01:00Z");
+  assert.ok(accepted.ok);
+  const cancelled = applyTaskAction(accepted.task, "cancel", null, "2026-10-17T10:04:00Z");
+  assert.ok(cancelled.ok);
+  assert.equal(cancelled.task.state, "cancelled");
+  assert.equal(cancelled.task.responder_name, "Guard Rahim");
+  assert.equal(cancelled.task.cancelled_at, "2026-10-17T10:04:00Z");
+});
+
+test("a done task cannot be cancelled; a cancelled task cannot be accepted, resolved, or re-cancelled", () => {
+  const done = applyTaskAction(openTask, "resolve", "Guard Rahim", "2026-10-17T10:10:00Z");
+  assert.ok(done.ok);
+  assert.equal(applyTaskAction(done.task, "cancel", null, "2026-10-17T10:11:00Z").ok, false);
+
+  const cancelled = applyTaskAction(openTask, "cancel", null, "2026-10-17T10:05:00Z");
+  assert.ok(cancelled.ok);
+  assert.equal(applyTaskAction(cancelled.task, "cancel", null, "2026-10-17T10:06:00Z").ok, false);
+  assert.equal(applyTaskAction(cancelled.task, "accept", "Guard Rahim", "2026-10-17T10:06:00Z").ok, false);
+  assert.equal(applyTaskAction(cancelled.task, "resolve", "Guard Rahim", "2026-10-17T10:06:00Z").ok, false);
+});
+
+test("resolve records the selected outcome and rejects invalid outcomes", () => {
+  for (const outcome of ["assisted_upstairs", "evacuated", "confirmed_safe", "other"] as const) {
+    const res = applyTaskAction(openTask, "resolve", "Guard Rahim", "2026-10-17T10:10:00Z", outcome);
+    assert.ok(res.ok);
+    assert.equal(res.task.outcome, outcome);
+  }
+  const withNote = applyTaskAction(
+    openTask,
+    "resolve",
+    "Guard Rahim",
+    "2026-10-17T10:10:00Z",
+    "other",
+    "  Delivered rations and blankets  ",
+  );
+  assert.ok(withNote.ok);
+  assert.equal(withNote.task.outcome, "other");
+  assert.equal(withNote.task.outcome_note, "Delivered rations and blankets");
+
+  const tooLong = applyTaskAction(
+    openTask,
+    "resolve",
+    "Guard Rahim",
+    "2026-10-17T10:10:00Z",
+    "other",
+    "a".repeat(141),
+  );
+  assert.equal(tooLong.ok, false);
+
+  const invalid = applyTaskAction(
+    openTask,
+    "resolve",
+    "Guard Rahim",
+    "2026-10-17T10:10:00Z",
+    "teleported" as unknown as import("../lib/engine/types.ts").TaskOutcome,
+  );
+  assert.equal(invalid.ok, false);
 });
 
 // --- responder route ------------------------------------------------------------------------

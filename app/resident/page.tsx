@@ -7,6 +7,7 @@ import {
   translate,
   translateResidentNeeds,
   translateHelpType,
+  translateTaskOutcome,
 } from "@/lib/translations";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -68,11 +69,13 @@ const TASK_BADGE: Record<TaskState, { label: string; className: string }> = {
   open: { label: "Sent", className: "bg-amber-500 text-white animate-pulse" },
   on_the_way: { label: "On the way", className: "bg-blue-600 text-white" },
   done: { label: "Resolved", className: "bg-emerald-600 text-white" },
+  cancelled: { label: "Cancelled", className: "bg-stone-500 text-white" },
 };
 
 export default function ResidentPage() {
-  const { language, toggleLanguage } = useLanguage();
-  const t = (key: Parameters<typeof translate>[1]) => translate(language, key);
+  const { language, toggleLanguage } = useLanguage("resident");
+  const t = (key: Parameters<typeof translate>[1], ...args: unknown[]) =>
+    translate(language, key, ...args);
   const [selectedResident, setSelectedResident] = useState<DemoResident>(
     DEMO_RESIDENTS[0],
   );
@@ -82,6 +85,8 @@ export default function ResidentPage() {
     `hydrotwin_dismissed_${selectedResident.id}`,
   );
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [helpType, setHelpType] = useState<HelpType>("trapped");
   const [people, setPeople] = useState(1);
   const [note, setNote] = useState("");
@@ -155,7 +160,7 @@ export default function ResidentPage() {
 
   const latest = tasks[0] ?? null;
   const task = latest && String(latest.id) !== dismissedId ? latest : null;
-  const liveTask = task && task.state !== "done" ? task : null;
+  const liveTask = task && task.state !== "done" && task.state !== "cancelled" ? task : null;
   const taskState = task?.state ?? null;
 
   // Buzz when the street gets worse or the task moves on — not on first load.
@@ -199,6 +204,7 @@ export default function ResidentPage() {
     setSelectedResident(resident);
     setTasks([]);
     setSheetOpen(false);
+    setConfirmingCancel(false);
     setMessage(null);
     resetForm();
     previous.current = { status: null, taskState: null };
@@ -269,12 +275,42 @@ export default function ResidentPage() {
       if (!res.ok) throw new Error();
       const data = await res.json().catch(() => ({}));
       applyTask(data.task);
-      setMessage(data.task ? t("markedSafeWithTask") : t("markedSafeNoTask"));
+      setMessage(
+        data.task ? t("markedSafeWithTask") : t("markedSafeNoTask"),
+      );
       vibrate(80);
     } catch {
       setMessage(t("couldNotReachServer"));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const cancelHelp = async () => {
+    if (cancelling || !liveTask) return;
+    setCancelling(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/guard-tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          taskId: liveTask.id,
+          action: "cancel",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMessage(data.error ?? t("couldNotSendHelp"));
+        return;
+      }
+      applyTask(data.task);
+      setConfirmingCancel(false);
+      vibrate(80);
+    } catch {
+      setMessage(t("noServerConnection"));
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -288,6 +324,21 @@ export default function ResidentPage() {
   // Second step of the tracker: who is coming, and for how long.
   const guardStep = (() => {
     if (!task) return null;
+
+    if (task.state === "cancelled") {
+      const cancelTimeMs = task.cancelled_at
+        ? new Date(task.cancelled_at).getTime()
+        : now;
+      const waitDuration = task.accepted_at
+        ? duration(task.accepted_at, cancelTimeMs)
+        : duration(task.created_at, cancelTimeMs);
+      return {
+        heading: task.accepted_at
+          ? `${language === "bm" ? "Pengawal" : "Guard"} ${task.responder_name ?? ""}`.trim()
+          : t("noGuardDispatched"),
+        detail: `${t("cancelledAfter")} ${waitDuration}`,
+      };
+    }
 
     if (!task.accepted_at) {
       return task.done_at
@@ -313,6 +364,7 @@ export default function ResidentPage() {
       detail: `${t("leftPost")} ${timeOf(task.accepted_at)} · ${now ? duration(task.accepted_at, now) : "0:00"}`,
     };
   })();
+
   return (
     <div className="min-h-screen touch-manipulation bg-stone-100 text-stone-900 pb-[calc(4rem+env(safe-area-inset-bottom))]">
       <PhoneHeader
@@ -353,15 +405,13 @@ export default function ResidentPage() {
 
           <div className="mt-3 text-xs bg-stone-50 rounded-lg p-2.5 border border-stone-200/80 space-y-1">
             <div className="flex justify-between gap-3">
-              <span className="text-stone-500">
-                {t("registeredStreetLabel")}
-              </span>
+              <span className="text-stone-500">{t("registeredStreet")}</span>
               <span className="font-medium text-stone-800 text-right">
                 {selectedResident.street_name}
               </span>
             </div>
             <div className="flex justify-between gap-3">
-              <span className="text-stone-500">{t("drainLabel")}</span>
+              <span className="text-stone-500">{t("drain")}</span>
               <span className="font-mono font-medium text-stone-800">
                 {selectedResident.drain_id}
               </span>
@@ -369,9 +419,8 @@ export default function ResidentPage() {
             {selectedResident.vulnerable && (
               <div className="pt-1 border-t border-stone-200 flex items-start gap-2">
                 <span className="shrink-0 whitespace-nowrap text-rose-700 font-medium">
-                  ⚠️ {t("vulnerableLabel")}
+                  ⚠️ {t("vulnerableProfile")}
                 </span>
-
                 <span className="min-w-0 text-stone-700">
                   {translateResidentNeeds(selectedResident.needs, language)}
                 </span>
@@ -403,17 +452,11 @@ export default function ResidentPage() {
                     : "bg-emerald-600 text-white"
               }`}
             >
-              {isRed
-                ? language === "bm"
-                  ? "BAHAYA"
-                  : "RED"
-                : isAmber
-                  ? language === "bm"
-                    ? "AMARAN"
-                    : "AMBER"
-                  : language === "bm"
-                    ? "SELAMAT"
-                    : "GREEN"}
+              {drainStatus.status === "red"
+                ? t("statusRed")
+                : drainStatus.status === "amber"
+                  ? t("statusAmber")
+                  : t("statusGreen")}
             </span>
           </div>
 
@@ -427,10 +470,7 @@ export default function ResidentPage() {
                   </span>
                 </div>
                 <p className="text-xs text-rose-700 font-medium mt-1">
-                  🚨{" "}
-                  {language === "bm"
-                    ? `Longkang ${selectedResident.drain_id} telah melimpah ke jalan.`
-                    : `Drain ${selectedResident.drain_id} has overflowed onto the street.`}
+                  🚨 {t("drainOverflow", selectedResident.drain_id)}
                 </p>
               </div>
             ) : isAmber && rising ? (
@@ -442,9 +482,8 @@ export default function ResidentPage() {
                   </span>
                 </div>
                 <p className="text-xs text-amber-800 font-medium mt-1">
-                  ⚠️ {t("waterRisingAlert")} {drainStatus.rate_cm_per_min}{" "}
-                  cm/min · {t("drainLabel").toLowerCase()} {fullPct}%{" "}
-                  {language === "bm" ? "penuh" : "full"}
+                  ⚠️ {t("waterRisingAlert")} {drainStatus.rate_cm_per_min} cm/min
+                  · {t("drain")} {fullPct}% {t("drainFull")}
                 </p>
               </div>
             ) : isAmber ? (
@@ -456,8 +495,7 @@ export default function ResidentPage() {
                   {drainStatus.rate_cm_per_min < 0
                     ? t("waterGoingDown")
                     : t("waterSteady")}{" "}
-                  · {t("drainLabel").toLowerCase()} {fullPct}%{" "}
-                  {language === "bm" ? "penuh" : "full"}
+                  · {t("drain")} {fullPct}% {t("drainFull")}
                 </p>
               </div>
             ) : (
@@ -467,7 +505,7 @@ export default function ResidentPage() {
                 </div>
                 <p className="text-xs text-emerald-700 mt-1">
                   {t("drainLevel")} {drainStatus.level_cm} cm ({fullPct}%{" "}
-                  {language === "bm" ? "penuh" : "full"}). {t("drainageNormal")}
+                  {t("drainFull")}). {t("drainageNormal")}
                 </p>
               </div>
             )}
@@ -475,7 +513,7 @@ export default function ResidentPage() {
 
           <div className="mt-3 pt-3 border-t border-stone-200/60">
             <span className="text-[11px] font-bold text-stone-700 uppercase tracking-wide">
-              {t("recommendedActionLabel")}
+              {t("recommendedAction")}
             </span>
             <p className="text-xs text-stone-800 font-medium mt-0.5">
               {isRed
@@ -492,7 +530,13 @@ export default function ResidentPage() {
         {/* Help tracker — the task is the source of truth, so a reload keeps it */}
         {task && guardStep && (
           <section
-            className={`rounded-xl border p-4 shadow-xs ${task.state === "done" ? "bg-emerald-50/60 border-emerald-300" : "bg-white border-rose-300 ring-2 ring-rose-200"}`}
+            className={`rounded-xl border p-4 shadow-xs ${
+              task.state === "done"
+                ? "bg-emerald-50/60 border-emerald-300"
+                : task.state === "cancelled"
+                  ? "bg-stone-50 border-stone-300"
+                  : "bg-white border-rose-300 ring-2 ring-rose-200"
+            }`}
           >
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-stone-900">
@@ -507,7 +551,9 @@ export default function ResidentPage() {
                   ? t("requestSent")
                   : task.state === "on_the_way"
                     ? t("onTheWay")
-                    : t("resolved")}
+                    : task.state === "cancelled"
+                      ? t("cancelledBadge")
+                      : t("resolved")}
               </span>
             </div>
 
@@ -538,9 +584,15 @@ export default function ResidentPage() {
               </li>
               <li className="flex gap-2.5">
                 <span
-                  className={`mt-0.5 h-4 w-4 shrink-0 rounded-full text-white text-[10px] flex items-center justify-center ${task.accepted_at || task.done_at ? "bg-emerald-600" : "bg-stone-300 animate-pulse"}`}
+                  className={`mt-0.5 h-4 w-4 shrink-0 rounded-full text-white text-[10px] flex items-center justify-center ${
+                    task.accepted_at || task.done_at
+                      ? "bg-emerald-600"
+                      : task.state === "cancelled"
+                        ? "bg-stone-400"
+                        : "bg-stone-300 animate-pulse"
+                  }`}
                 >
-                  {task.accepted_at || task.done_at ? "✓" : ""}
+                  {task.state === "cancelled" ? "—" : task.accepted_at || task.done_at ? "✓" : ""}
                 </span>
                 <div className="min-w-0">
                   <div className="font-semibold text-stone-800">
@@ -553,32 +605,46 @@ export default function ResidentPage() {
               </li>
               <li className="flex gap-2.5">
                 <span
-                  className={`mt-0.5 h-4 w-4 shrink-0 rounded-full text-white text-[10px] flex items-center justify-center ${task.done_at ? "bg-emerald-600" : "bg-stone-300"}`}
+                  className={`mt-0.5 h-4 w-4 shrink-0 rounded-full text-white text-[10px] flex items-center justify-center ${
+                    task.state === "cancelled"
+                      ? "bg-stone-500"
+                      : task.done_at
+                        ? "bg-emerald-600"
+                        : "bg-stone-300"
+                  }`}
                 >
-                  {task.done_at ? "✓" : ""}
+                  {task.state === "cancelled" ? "✕" : task.done_at ? "✓" : ""}
                 </span>
                 <div className="min-w-0">
                   <div className="font-semibold text-stone-800">
-                    {task.done_at
-                      ? `${t("resolved")} · ${timeOf(task.done_at)}`
-                      : t("resolved")}
+                    {task.state === "cancelled"
+                      ? `${t("requestCancelledByYou")}${task.cancelled_at ? ` · ${timeOf(task.cancelled_at)}` : ""}`
+                      : task.done_at
+                        ? `${t("resolved")} · ${timeOf(task.done_at)}`
+                        : t("resolved")}
                   </div>
+                  {task.state === "done" && task.outcome && (
+                    <div className="text-stone-600 font-medium mt-0.5">
+                      {t("outcomeLabel")} {translateTaskOutcome(task.outcome, language)}
+                      {task.outcome === "other" && task.outcome_note ? ` — ${task.outcome_note}` : ""}
+                    </div>
+                  )}
                 </div>
               </li>
             </ol>
 
-            {task.check_in_state === "safe" && task.state !== "done" && (
+            {task.check_in_state === "safe" && task.state !== "done" && task.state !== "cancelled" && (
               <p className="mt-3 text-xs text-emerald-700 font-medium">
                 {t("residentSafe")}
               </p>
             )}
 
-            <div className="mt-3 pt-3 border-t border-stone-200/60 flex items-center gap-2">
+            <div className="mt-3 pt-3 border-t border-stone-200/60 flex items-center gap-2 flex-wrap">
               {liveTask ? (
                 <>
                   <button
                     onClick={openSheet}
-                    disabled={submitting}
+                    disabled={submitting || cancelling}
                     className="flex-1 min-h-11 rounded-lg text-xs font-semibold bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-300"
                   >
                     {liveTask.check_in_state === "need_help"
@@ -587,11 +653,20 @@ export default function ResidentPage() {
                   </button>
                   <button
                     onClick={sendSafe}
-                    disabled={submitting || liveTask.check_in_state === "safe"}
+                    disabled={submitting || cancelling || liveTask.check_in_state === "safe"}
                     className="flex-1 min-h-11 rounded-lg text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 disabled:opacity-50"
                   >
                     {t("safeNow")}
                   </button>
+                  {liveTask.check_in_state === "need_help" && (
+                    <button
+                      onClick={() => setConfirmingCancel(true)}
+                      disabled={submitting || cancelling}
+                      className="min-h-11 px-3 rounded-lg text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 disabled:opacity-50"
+                    >
+                      {t("cancelRequest")}
+                    </button>
+                  )}
                 </>
               ) : (
                 <button
@@ -607,6 +682,40 @@ export default function ResidentPage() {
               {t("notLivePosition")}
             </p>
           </section>
+        )}
+
+        {/* Cancel Confirmation Modal */}
+        {confirmingCancel && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs">
+            <div className="bg-white rounded-2xl max-w-sm w-full p-5 shadow-xl border border-stone-200 space-y-4">
+              <div>
+                <h3 className="text-base font-bold text-stone-900">
+                  {t("confirmCancelTitle")}
+                </h3>
+                <p className="text-xs text-stone-600 mt-1.5 leading-relaxed">
+                  {t("confirmCancelDesc")}
+                </p>
+              </div>
+              <div className="flex gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setConfirmingCancel(false)}
+                  disabled={cancelling}
+                  className="flex-1 min-h-11 rounded-lg text-xs font-semibold bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300"
+                >
+                  {t("confirmCancelNo")}
+                </button>
+                <button
+                  type="button"
+                  onClick={cancelHelp}
+                  disabled={cancelling}
+                  className="flex-1 min-h-11 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-xs disabled:opacity-60"
+                >
+                  {cancelling ? t("cancelling") : t("confirmCancelYes")}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Safety check-in: the two buttons, or the help sheet */}

@@ -1,7 +1,7 @@
 // Call-for-help loop: what a resident may ask for, how a guard task moves from open to done, and
 // the guard's route to the resident. Pure TypeScript — these rules live here only (AGENTS.md rule 2).
 
-import type { GuardTask, HelpType, Status } from "./types.ts";
+import type { GuardTask, HelpType, Status, TaskOutcome } from "./types.ts";
 import type { StreetFeature } from "./route.ts";
 
 // ---------------------------------------------------------------------------------------------
@@ -46,10 +46,19 @@ export function parseHelpRequest(
 }
 
 // ---------------------------------------------------------------------------------------------
-// Task lifecycle: open → on_the_way → done (resolve also works straight from open)
+// Task lifecycle: open → on_the_way → done | cancelled (resolve also works straight from open)
 // ---------------------------------------------------------------------------------------------
 
-export type TaskAction = "accept" | "resolve";
+export const TASK_OUTCOMES: ReadonlyArray<{ id: TaskOutcome; label: string }> = [
+  { id: "assisted_upstairs", label: "Assisted upstairs" },
+  { id: "evacuated", label: "Evacuated" },
+  { id: "confirmed_safe", label: "Resident confirmed safe" },
+  { id: "other", label: "Other" },
+];
+
+export const MAX_OUTCOME_NOTE_CHARS = 140;
+
+export type TaskAction = "accept" | "resolve" | "cancel";
 
 /** Returns a new task; never mutates the one passed in. */
 export function applyTaskAction(
@@ -57,17 +66,54 @@ export function applyTaskAction(
   action: TaskAction,
   responder: string | null,
   now: string,
+  outcome: TaskOutcome | null = null,
+  outcome_note: string | null = null,
 ): { ok: true; task: GuardTask } | { ok: false; error: string } {
   if (task.state === "done") return { ok: false, error: "task already resolved" };
+  if (task.state === "cancelled") return { ok: false, error: "task already cancelled" };
+
+  if (action === "cancel") {
+    return {
+      ok: true,
+      task: {
+        ...task,
+        state: "cancelled",
+        cancelled_at: now,
+      },
+    };
+  }
+
   if (action === "accept") {
     if (task.state === "on_the_way") {
       return { ok: false, error: `${task.responder_name ?? "a guard"} is already on the way` };
     }
     return { ok: true, task: { ...task, state: "on_the_way", accepted_at: now, responder_name: responder } };
   }
+
+  if (outcome !== null && !TASK_OUTCOMES.some((o) => o.id === outcome)) {
+    return { ok: false, error: "unknown resolution outcome" };
+  }
+
+  let note: string | null = null;
+  if (outcome_note != null) {
+    if (typeof outcome_note !== "string") return { ok: false, error: "outcome note must be text" };
+    const trimmed = outcome_note.trim();
+    if (trimmed.length > MAX_OUTCOME_NOTE_CHARS) {
+      return { ok: false, error: `outcome note longer than ${MAX_OUTCOME_NOTE_CHARS} characters` };
+    }
+    note = trimmed || null;
+  }
+
   return {
     ok: true,
-    task: { ...task, state: "done", done_at: now, responder_name: responder ?? task.responder_name ?? null },
+    task: {
+      ...task,
+      state: "done",
+      done_at: now,
+      responder_name: responder ?? task.responder_name ?? null,
+      outcome: outcome ?? "other",
+      outcome_note: note,
+    },
   };
 }
 

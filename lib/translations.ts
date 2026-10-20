@@ -1,5 +1,5 @@
 import type { Language } from "@/lib/language";
-import type { HelpType } from "@/lib/engine/types";
+import type { HelpType, TaskOutcome } from "@/lib/engine/types";
 import type { ResponderOutcome } from "@/lib/engine/help";
 import type { RouteOutcome } from "@/lib/engine/route";
 
@@ -105,6 +105,32 @@ const translations = {
     couldNotReachServer: "Could not reach the HydroTwin server. Call security directly.",
     markedSafeWithTask: "Marked SAFE — the guard on your task can see it.",
     markedSafeNoTask: "Marked SAFE. No guard task is open for you right now.",
+
+    // Help Request Cancellation & Resolution Outcomes
+    cancelRequest: "Cancel request",
+    confirmCancelTitle: "Cancel help request?",
+    confirmCancelDesc: "Are you sure you want to cancel? Guards on duty will be informed that help is no longer needed.",
+    confirmCancelYes: "Yes, cancel request",
+    confirmCancelNo: "Keep request",
+    cancelling: "Cancelling...",
+    cancelledBadge: "Cancelled",
+    cancelledByResident: "Cancelled by resident",
+    requestCancelledByYou: "Request cancelled by you",
+    guardCancelledNotice: (name: string = "") => name ? `⚠️ Request for ${name} was cancelled by resident.` : "⚠️ Help request was cancelled by resident.",
+    guardUpdatedNotice: (name: string = "") => name ? `ℹ️ ${name} updated their request.` : "ℹ️ Help request updated.",
+    guardSafeNotice: (name: string = "") => name ? `✅ ${name} reported safe.` : "✅ Resident reported safe.",
+    noGuardDispatched: "No guard dispatched",
+    cancelledAfter: "Cancelled after",
+    selectOutcomeTitle: "Resolve Task — Select Outcome",
+    selectOutcomeDesc: "Select what was done to resolve this task:",
+    taskOutcome_assisted_upstairs: "Assisted upstairs",
+    taskOutcome_evacuated: "Evacuated",
+    taskOutcome_confirmed_safe: "Resident confirmed safe",
+    taskOutcome_other: "Other",
+    specifyOtherOutcome: "Specify action taken (optional):",
+    otherOutcomePlaceholder: "e.g. Delivered emergency food & water, cleared debris...",
+    confirmResolveBtn: "Confirm & Resolve",
+    outcomeLabel: "Outcome:",
 
     // Help Types
     helpType_trapped: "Trapped / cut off",
@@ -402,6 +428,32 @@ const translations = {
     markedSafeWithTask: "Ditandakan SELAMAT — pengawal tugasan anda telah dimaklumkan.",
     markedSafeNoTask: "Ditandakan SELAMAT. Tiada tugasan pengawal terbuka untuk anda sekarang.",
 
+    // Help Request Cancellation & Resolution Outcomes
+    cancelRequest: "Batal permohonan",
+    confirmCancelTitle: "Batalkan permohonan bantuan?",
+    confirmCancelDesc: "Adakah anda pasti mahu membatalkan? Pengawal bertugas akan dimaklumkan bahawa bantuan tidak lagi diperlukan.",
+    confirmCancelYes: "Ya, batalkan permohonan",
+    confirmCancelNo: "Kekalkan permohonan",
+    cancelling: "Membatalkan...",
+    cancelledBadge: "Dibatalkan",
+    cancelledByResident: "Dibatalkan oleh penduduk",
+    requestCancelledByYou: "Permohonan dibatalkan oleh anda",
+    guardCancelledNotice: (name: string = "") => name ? `⚠️ Permohonan untuk ${name} telah dibatalkan oleh penduduk.` : "⚠️ Permohonan bantuan telah dibatalkan oleh penduduk.",
+    guardUpdatedNotice: (name: string = "") => name ? `ℹ️ ${name} telah mengemas kini permohonan.` : "ℹ️ Permohonan bantuan telah dikemas kini.",
+    guardSafeNotice: (name: string = "") => name ? `✅ ${name} telah melaporkan diri selamat.` : "✅ Penduduk telah melaporkan diri selamat.",
+    noGuardDispatched: "Tiada pengawal dihantar",
+    cancelledAfter: "Dibatalkan selepas",
+    selectOutcomeTitle: "Selesaikan Tugasan — Pilih Tindakan",
+    selectOutcomeDesc: "Pilih tindakan yang telah diambil untuk menyelesaikan tugasan ini:",
+    taskOutcome_assisted_upstairs: "Dibantu ke tingkat atas",
+    taskOutcome_evacuated: "Dipindahkan",
+    taskOutcome_confirmed_safe: "Penduduk disahkan selamat",
+    taskOutcome_other: "Lain-lain",
+    specifyOtherOutcome: "Nyatakan tindakan diambil (pilihan):",
+    otherOutcomePlaceholder: "cth. Hantar bekalan makanan & air, bersihkan sisa...",
+    confirmResolveBtn: "Sahkan & Selesai",
+    outcomeLabel: "Hasil:",
+
     // Help Types
     helpType_trapped: "Terkandas / terputus laluan",
     helpType_medical: "Isu perubatan",
@@ -602,13 +654,13 @@ export type TranslationKey = keyof typeof translations.en;
 export function translate(
   language: Language,
   key: TranslationKey,
-  ...args: any[]
+  ...args: unknown[]
 ): string {
-  const dict = translations[language] ?? translations.en;
-  const entry = (dict as any)[key] ?? (translations.en as any)[key];
+  const dict = (translations[language] ?? translations.en) as Record<string, unknown>;
+  const entry = dict[key] ?? (translations.en as Record<string, unknown>)[key];
 
   if (typeof entry === "function") {
-    return entry(...args);
+    return (entry as (...a: unknown[]) => string)(...args);
   }
 
   if (typeof entry === "string") {
@@ -689,5 +741,14 @@ export function translateEvacOutcome(
   return translate(language, key);
 }
 
-
-
+/**
+ * Translates resolution outcomes for guard and resident task views.
+ */
+export function translateTaskOutcome(
+  outcome: TaskOutcome | null | undefined,
+  language: Language,
+): string {
+  if (!outcome) return "";
+  const key = `taskOutcome_${outcome}` as TranslationKey;
+  return translate(language, key) || outcome;
+}

@@ -45,6 +45,13 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] Installable phone pages (manifests + icons) · README phone section (same Wi-Fi link, Add to Home Screen)
 - [ ] Azim's phone on the laptop's network: Add to Home Screen, Start shift beep, full loop phone ↔ phone — use a phone hotspot (big shared Wi-Fi blocks phone ↔ laptop, 19 Oct)
 
+### Better help-request management (21 Oct) ✅
+- [x] Resident help cancellation with explicit confirmation modal prompt (`/resident`)
+- [x] Guard live cancellation alerts with banner notice, chime and vibration cues, card state update (`/guard`)
+- [x] Guard resolution outcome modal on task completion: *Assisted upstairs*, *Evacuated*, *Resident confirmed safe*, *Other*
+- [x] Resident request tracker displays recorded resolution outcome under Resolved step
+- [x] Pure engine rules (`lib/engine/help.ts`), 16 unit tests passing (`tests/help.test.ts`), Supabase migration (`20261021000000_task_cancel_and_outcome.sql`), contracts updated (`docs/data-contracts.md`)
+
 ## Development screening extension (18 Oct) ✅
 - [x] Plan mode: new development workflow alongside existing township upgrades; draw/undo/finish a site boundary, choose housing/commercial, automatic nearest-road / Live zone suggestions with manual overrides, before/after land cover
 - [x] Pure engine: explicit area-weighted runoff assumptions, three identical-storm replays, receiving-zone street impacts and access-road screening; no plot-level or downstream prediction
