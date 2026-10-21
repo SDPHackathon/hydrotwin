@@ -54,3 +54,10 @@ Copied verbatim from the vendors' official repos, pinned to a commit, licence fi
 | `vercel-react-best-practices` | vercel-labs/agent-skills `063bee9` | MIT (declared in SKILL.md; repo has no LICENSE file) | no |
 | `maplibre-tile-sources` | maplibre/maplibre-agent-skills `76a1942` | MIT (+ NOTICE, Mapbox) | no |
 | `maplibre-source-wiring` | maplibre/maplibre-agent-skills `76a1942` | MIT (+ NOTICE, Mapbox) | no |
+
+## Pitch presentation assets (22 October 2026)
+
+| Asset | Use | Origin / licence | Disclosure |
+|---|---|---|---|
+| Fictional township retention landscape | Background in the HydroTwin pitch deck | Original OpenAI-generated project illustration; no external photograph or dataset | AI-generated illustration credited in slide notes. User supplied the design reference; its image is not redistributed in the deck. |
+| HydroTwin product screenshots | Dashboard, flood replay, planning comparison and resident route | Original app UI with existing OSM/OpenFreeMap/OpenMapTiles map data and Open-Meteo elevations under the licences already listed above | Map attribution remains visible and source credits appear in slide notes. |
