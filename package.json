@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "data:evacuation": "node --experimental-strip-types scripts/prepare-evacuation-destinations.mjs",
     "data": "node scripts/fetch-data.mjs && node scripts/make-flood-zones.mjs && node scripts/make-seed.mjs",
     "seed": "node scripts/make-seed.mjs"
   },

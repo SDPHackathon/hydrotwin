@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { acceptGuardTask, cancelGuardTask, closeGuardTask, getState } from "@/lib/server-state";
 import { TASK_OUTCOMES } from "@/lib/engine/help";
 import type { TaskOutcome } from "@/lib/engine/types";
+import { locationTasks, transitionLocationTask } from "@/lib/location-help";
 
 const MAX_RESPONDER_CHARS = 40;
 
 // GET — all tasks and check-ins; ?resident_id=… narrows to one resident so the resident page can follow its own call.
 export async function GET(req: NextRequest) {
   const residentId = req.nextUrl.searchParams.get("resident_id");
-  const { guardTasks, checkIns } = getState();
+  const state = getState();
+  const guardTasks = [...locationTasks(), ...state.guardTasks];
+  const checkIns = state.checkIns;
   if (!residentId) return NextResponse.json({ guardTasks, checkIns });
   return NextResponse.json({
     guardTasks: guardTasks.filter((t) => t.resident_id === residentId),
@@ -46,7 +49,9 @@ export async function POST(req: NextRequest) {
     const name = responder ? responder.trim() : null;
 
     let res;
-    if (action === "accept") {
+    if (String(taskId).startsWith("location-")) {
+      res = transitionLocationTask(taskId, action, name, outcome as TaskOutcome | null, outcome_note as string | null);
+    } else if (action === "accept") {
       res = acceptGuardTask(taskId, name);
     } else if (action === "cancel") {
       res = cancelGuardTask(taskId);

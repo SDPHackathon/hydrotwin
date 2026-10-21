@@ -16,6 +16,7 @@ import { useLanguage } from "@/lib/language";
 import ResponderMap, { MAP_ATTRIBUTION } from "@/components/ResponderMap";
 import { GUARDS, GUARD_POSTS } from "@/lib/guards-data";
 import { useStoredValue } from "@/lib/useStoredValue";
+import { effectiveFlood } from "@/lib/engine/evacuation";
 import {
   findResponderRoute,
   TASK_OUTCOMES,
@@ -32,6 +33,7 @@ import type {
 } from "@/lib/engine/types";
 
 const POLL_MS = 1500;
+const EMPTY_STATUSES: Record<string, Status | undefined> = {};
 const GUARD_KEY = "hydrotwin_guard_name";
 const BUKIT_RAJA_CENTER: [number, number] = [101.4392, 3.0865];
 const ACTION_COOLDOWN_MS = 600; // "On my way" turns into "Resolved" in the same spot — swallow the second tap of a double-tap
@@ -127,7 +129,7 @@ export default function GuardPage() {
   const [shiftOn, setShiftOn] = useState(false);
   const [tasks, setTasks] = useState<GuardTask[]>([]);
   const [statuses, setStatuses] = useState<Record<string, DrainStatus>>({});
-  const [streets, setStreets] = useState<StreetFeature[] | null>(null);
+  const [routeContext, setRouteContext] = useState<{ area: string; streets: StreetFeature[]; statuses: Record<string, Status | undefined>; center: [number, number] } | null>(null);
   const [filter, setFilter] = useState<"all" | "sos" | "mine" | "done">("all");
   const [loading, setLoading] = useState(true);
   const [routeTaskId, setRouteTaskId] = useState<string | number | null>(null);
@@ -173,23 +175,6 @@ export default function GuardPage() {
     return () => {
       mounted = false;
       clearInterval(interval);
-    };
-  }, []);
-
-  // Road data for the route (Bukit Raja only — the phone pages are, like the residents).
-  useEffect(() => {
-    let mounted = true;
-    fetch("/data/bukit-raja/streets.geojson")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((geo) => {
-        if (mounted && geo?.features)
-          setStreets(geo.features as StreetFeature[]);
-      })
-      .catch(() => {
-        // the route panel says so
-      });
-    return () => {
-      mounted = false;
     };
   }, []);
 
@@ -429,21 +414,42 @@ export default function GuardPage() {
     }
   };
 
-  const statusMap = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(statuses).map(([id, s]) => [id, s.status]),
-      ) as Record<string, Status>,
-    [statuses],
-  );
   const routeTask =
     tasks.find((t) => t.id === routeTaskId && t.state !== "cancelled") ?? null;
+  const routeArea = routeTask?.area_slug ?? "bukit-raja";
+  useEffect(() => {
+    if (routeTaskId === null) return;
+    let active = true, deadline = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const controller = new AbortController();
+    const poll = async () => {
+      const started = Date.now();
+      try {
+        const [roadsRes, stateRes] = await Promise.all([
+          fetch(`/api/township/shared?area=${encodeURIComponent(routeArea)}`, { signal: controller.signal }),
+          fetch(`/api/risk-engine?area=${encodeURIComponent(routeArea)}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]) }),
+        ]);
+        if (!roadsRes.ok || !stateRes.ok) throw new Error("Route conditions unavailable");
+        const bundle = await roadsRes.json(), snapshot = await stateRes.json();
+        const flood = effectiveFlood(snapshot.statuses, snapshot.floodEvidence, snapshot.serverNow);
+        deadline = started + Math.min(6000, flood.expires_at === null ? 6000 : Math.max(0, flood.expires_at - snapshot.serverNow));
+        if (active) setRouteContext({ area: routeArea, streets: bundle.streets.features, center: bundle.area.center,
+          statuses: Object.fromEntries(Object.entries(flood.statuses).map(([id, s]) => [id, s.status])) });
+      } catch { if (active) setRouteContext(null); }
+      finally { if (active) timer = setTimeout(poll, 1500); }
+    };
+    void poll();
+    const expiry = setInterval(() => { if (deadline && Date.now() >= deadline) setRouteContext(null); }, 500);
+    return () => { active = false; controller.abort(); clearTimeout(timer); clearInterval(expiry); };
+  }, [routeTaskId, routeArea]);
+  const streets = routeContext?.area === routeArea ? routeContext.streets : null;
+  const routeStatuses = routeContext?.area === routeArea ? routeContext.statuses : EMPTY_STATUSES;
   const route = useMemo(
     () =>
       routeTask && streets
-        ? findResponderRoute(streets, GUARD_POSTS, routeTask.street_id, statusMap)
+        ? findResponderRoute(streets, routeArea === "bukit-raja" ? GUARD_POSTS : [], routeTask.street_id, routeStatuses, routeTask.position)
         : null,
-    [routeTask, streets, statusMap],
+    [routeTask, streets, routeStatuses, routeArea],
   );
 
   const redDrains = Object.values(statuses).filter((s) => s.status === "red");
@@ -616,9 +622,10 @@ export default function GuardPage() {
             <div className="mt-2">
               <ResponderMap
                 streets={streets ?? []}
-                statuses={statusMap}
+                statuses={routeStatuses}
                 route={route}
-                center={BUKIT_RAJA_CENTER}
+                center={routeContext?.center ?? BUKIT_RAJA_CENTER}
+                key={routeArea}
               />
             </div>
             <p className="mt-1 text-[10px] text-stone-500">{MAP_ATTRIBUTION}</p>
@@ -704,7 +711,7 @@ export default function GuardPage() {
           )}
 
           {visible.map((t) => {
-            const drain = statuses[t.drain_id];
+            const drain = !t.area_slug || t.area_slug === "bukit-raja" ? statuses[t.drain_id] : undefined;
             const isRedZone = drain?.status === "red";
             const isDone = t.state === "done";
             const isCancelled = t.state === "cancelled";
@@ -751,7 +758,7 @@ export default function GuardPage() {
                       </span>
                     </div>
                     <p className="text-xs text-stone-600 mt-0.5">
-                      {t.street_name || "Street"} · Zone{" "}
+                      {t.area_name ? `${t.area_name} · ` : ""}{t.street_name || "Street"} · Zone{" "}
                       <span className="font-mono font-semibold">
                         {t.drain_id}
                       </span>

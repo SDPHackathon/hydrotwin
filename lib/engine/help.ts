@@ -2,7 +2,7 @@
 // the guard's route to the resident. Pure TypeScript — these rules live here only (AGENTS.md rule 2).
 
 import type { GuardTask, HelpType, Status, TaskOutcome } from "./types.ts";
-import type { StreetFeature } from "./route.ts";
+import type { RoadPosition, StreetFeature } from "./route.ts";
 
 // ---------------------------------------------------------------------------------------------
 // Help request
@@ -174,6 +174,7 @@ export function findResponderRoute(
   posts: GuardPost[],
   residentStreetId: string,
   statuses: Record<string, Status | undefined>,
+  targetPosition?: RoadPosition,
 ): ResponderRoute {
   const byId = new Map(streets.map((s) => [s.properties.id, s]));
   const fail = (outcome: ResponderOutcome, destination: Coord | null = null): ResponderRoute => ({
@@ -184,7 +185,11 @@ export function findResponderRoute(
   const resident = byId.get(residentStreetId);
   const residentCoords = resident?.geometry.coordinates ?? [];
   if (!resident || !residentCoords.length) return fail("invalid_resident");
-  const target = coord(residentCoords[Math.floor(residentCoords.length / 2)]);
+  if (targetPosition && (!Number.isInteger(targetPosition.segment_index) || targetPosition.segment_index < 0 || targetPosition.segment_index + 1 >= residentCoords.length ||
+      !Number.isFinite(targetPosition.fraction) || targetPosition.fraction < 0 || targetPosition.fraction > 1)) return fail("invalid_resident");
+  const i = targetPosition?.segment_index ?? 0, fraction = targetPosition?.fraction ?? 0;
+  const target: Coord = targetPosition ? [residentCoords[i][0] + (residentCoords[i + 1][0] - residentCoords[i][0]) * fraction,
+    residentCoords[i][1] + (residentCoords[i + 1][1] - residentCoords[i][1]) * fraction] : coord(residentCoords[Math.floor(residentCoords.length / 2)]);
   if (!statuses[resident.properties.drain_id]) return fail("resident_unknown", target);
   if (!posts.length) return fail("no_posts", target);
 
@@ -193,7 +198,8 @@ export function findResponderRoute(
   for (const street of streets) {
     const status = statuses[street.properties.drain_id];
     if (!status) continue;
-    const coords = street.geometry.coordinates;
+    const supplied = street.geometry.coordinates;
+    const coords = targetPosition && street.properties.id === residentStreetId ? [...supplied.slice(0, i + 1), target, ...supplied.slice(i + 1)] : supplied;
     for (let i = 0; i + 1 < coords.length; i++) {
       const a = coord(coords[i]), b = coord(coords[i + 1]);
       const ka = key(a), kb = key(b);

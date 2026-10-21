@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateTownship } from "@/lib/generator/pipeline";
+import { registerSharedTownship } from "@/lib/shared-townships";
 
 export async function POST(req: Request) {
   try {
@@ -32,6 +33,7 @@ export async function POST(req: Request) {
       name,
       bbox: bbox as [number, number, number, number],
     });
+    await registerSharedTownship(bundle);
     return NextResponse.json({ success: true, data: bundle });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to generate township";

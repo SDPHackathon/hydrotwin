@@ -37,6 +37,7 @@ export interface ScenarioResult {
 }
 
 export interface DemoResident {
+  evacuation_assistance?: "required" | "unknown";
   id: string;
   display_name: string;
   street_id: string;
@@ -51,6 +52,10 @@ export type HelpType = "trapped" | "medical" | "evacuate" | "water_in_house" | "
 export type TaskOutcome = "assisted_upstairs" | "evacuated" | "confirmed_safe" | "other";
 
 export interface GuardTask {
+  // Optional location-based demo request fields; not mirrored to the resident-FK tables.
+  area_slug?: string;
+  area_name?: string;
+  position?: { segment_index: number; fraction: number };
   id: string | number;
   resident_id: string;
   resident_name: string;

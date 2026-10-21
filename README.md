@@ -59,7 +59,13 @@ We have no access to real drain sensors, so drains are **simulated zones** of re
 
 ## Data, licences and AI use
 
-Safe Routes uses user-designated safe destinations saved per township on this device. Configure a destination street endpoint in Safe Routes, then use automatic nearest-reachable routing or select a destination. These points are unverified for real evacuation. Routes use current simulated street statuses, permit amber roads with a warning, and exclude red roads and roads with unknown status; they do not forecast conditions during travel.
+Safe Routes and `/resident` automatically derive **demo dry road points** for each shared township. A deterministic algorithm replays the baseline 210-minute storm, excludes every zone that becomes red, and chooses spaced anchors on actual mapped roads. Built-in and previously downloaded townships use the same calculation as new downloads; no AI API, hand-picked refuge list, or new shelter feed is required. Routes prefer green-only roads, fall back to amber with a warning, exclude red/unknown streets and require green destination access. A flooded origin never produces a walking line. Select **Phone/server simulation** on the dashboard to compare with residents; local replay is separate.
+
+The resident portal uses **Locate me** (one-shot permission, HTTPS required except localhost) or street-name/road-ID suggestions. Manual search uses an approximate street endpoint; location readings snap to the nearest road within 75 m and require confirmation. Raw GPS coordinates are not sent or stored; routing uses the confirmed street/segment anchor. Full house-address search and journey tracking are not provided. These points stayed unflooded only in the baseline simulation: they are **not verified shelters**, and pedestrian/wheelchair access is unverified. Disconnected or flooded-only components can have no reachable point.
+
+Downloaded areas are shared from the laptop dashboard to a bounded, process-local demo registry. Previously cached downloads republish when the dashboard opens. After a server restart, reopen the dashboard to share custom areas again. Each township has separate simulator evidence; initial conditions remain unknown until readings or reset. Offline/stale conditions withdraw guidance. Location help shares the confirmed road anchor explicitly with the demo guard desk and remains independent of route availability. Help sessions are anonymous, process-local, last at most 24 hours without an update, and are not written into the fictional-resident database tables. Personal destination pins remain opt-in device drafts.
+
+Export the Bukit Raja catalogue with `npm run data:evacuation` without regenerating flood data. See [`docs/evacuation-demo.md`](docs/evacuation-demo.md) for validation and pitch wording.
 
 - Third-party software and data: [`docs/third-party.md`](docs/third-party.md)
 - AI disclosure (T&C cl. 13): [`docs/ai-use-log.md`](docs/ai-use-log.md)

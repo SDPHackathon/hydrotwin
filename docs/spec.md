@@ -23,7 +23,7 @@ The 5-minute video (due with the submission, 23 Oct 11:59 PM) follows this story
 3. Drains fill (the rings on the map fill up). **The lowest zones (D07, D08) turn amber ~30 min before they overflow** → residents on its streets get an alert with an action ("Move your car to the multi-storey car park now").
 4. D07/D08 overflow → **red** → water spreads zone by zone → the guard view lists vulnerable residents on red streets → guards tick them off; residents tap *I'm safe* / *I need help*.
 5. **Plan mode**: put a retention pond on D08 (OSM already shows a flood retention pond nearby) → replay the same storm → before / after (flooded streets, deepest water, minutes to first red).
-6. **Safe routes**: from a house on a red street to the nearest safe point, avoiding red streets.
+6. **Safe routes**: before the origin floods, derive shared dry road anchors from the baseline storm for every township and show a green-first route from a confirmed Locate me/manual street origin. Flood a connecting zone to demonstrate a detour or explicit failure. Flood the origin to withdraw the walking line and offer help; never route through a flooded origin.
 
 ## Acceptance criteria
 
@@ -38,8 +38,10 @@ The 5-minute video (due with the submission, 23 Oct 11:59 PM) follows this story
 | PLAN-1 | Pick a drain → apply one fix. Draft effects: bigger drain = outflow ×1.5 · retention pond = catchment ×0.6 · green area = catchment ×0.8 (team: find a source for the numbers or call them assumptions) | Step D |
 | PLAN-2 | Replay the storm instantly (run the engine in a loop, no waiting) → before / after table: streets flooded, deepest water (cm), minutes to first red | Step D |
 | PLAN-3 | Save a scenario to `plan_scenarios`; compare two | Step D |
-| ROUTE-1 | Red streets blocked; shortest path on the OSM road graph from a chosen house to the nearest safe point | Step E |
+| ROUTE-1 | Green-only routes first, shortest distance within that tier; amber fallback warns; red/unknown streets and flooded origins blocked. Street endpoints/pins are schematic origins, not house locations. | Step E + automatic routing |
 | ROUTE-2 | Responder route: nearest guard post → the resident's street, dry roads first, the wet stretch measured and drawn separately (`findResponderRoute`) | Step F |
+| ROUTE-3 | Simulation-derived dry road points load for built-in and shared downloaded townships. Resident Locate me/manual hints replace personas. Routing and street condition share one area-specific phone/server snapshot; anonymous demo help tracking stays independent. | Automatic routing |
+| ROUTE-4 | Route expiry, unknown/offline conditions, destination ineligibility and blocked origins withdraw the line. Actual previous-path evidence drives alerts; ordinary polls do not re-alert or move the camera. | Automatic routing |
 
 ## Build order — one builder, so depth before breadth
 

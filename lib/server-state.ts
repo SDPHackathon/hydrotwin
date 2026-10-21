@@ -4,8 +4,12 @@ import { applyTaskAction, type HelpRequest, type TaskAction } from "@/lib/engine
 import { DEMO_RESIDENTS } from "@/lib/residents-data";
 import { getServerSupabase } from "@/lib/supabase";
 import drainsData from "@/public/data/bukit-raja/drains.json";
+import type { FloodEvidence } from "@/lib/engine/evacuation";
 
 interface ServerStore {
+  observedAt: Record<string, number>;
+  revision: number;
+  sessionId: string;
   stormUpdatedAt: number | null;
   minute: number;
   running: boolean;
@@ -31,6 +35,9 @@ function initStore(): ServerStore {
   }
 
   return {
+    observedAt: {},
+    revision: 0,
+    sessionId: Date.now().toString(36),
     stormUpdatedAt: null,
     minute: 0,
     running: false,
@@ -48,13 +55,21 @@ if (!globalStore.__HYDROTWIN_STORE__) {
   globalStore.__HYDROTWIN_STORE__ = initStore();
 }
 const store = globalStore.__HYDROTWIN_STORE__;
+// Existing dev hot-reload stores have no observation evidence. Fail closed until new readings.
+store.observedAt ??= {};
+store.revision ??= 0;
+store.sessionId ??= Date.now().toString(36);
 
 export function getDrains(): Drain[] {
   return drains;
 }
 
 export function getState() {
+  const floodEvidence: FloodEvidence = { source: "phone_demo", revision: `${store.sessionId}:${store.revision}`,
+    observed_at: { ...store.observedAt }, controller_at: store.stormUpdatedAt, running: store.running, minute: store.minute };
   return {
+    floodEvidence,
+    serverNow: Date.now(),
     stormAgeMs: store.stormUpdatedAt == null ? null : Math.max(0, Date.now() - store.stormUpdatedAt),
     minute: store.minute,
     running: store.running,
@@ -71,6 +86,9 @@ export function resetState() {
   store.running = false;
   store.speed = 1;
   store.stormUpdatedAt = Date.now();
+  // An explicit simulator reset establishes zero readings; process startup does not.
+  store.observedAt = Object.fromEntries(drains.map((d) => [d.id, store.stormUpdatedAt!]));
+  store.revision++;
   store.histories = fresh.histories;
   store.statuses = fresh.statuses;
   store.guardTasks = [];
@@ -100,7 +118,7 @@ export async function processReadings(readings: Array<{
   if (speed !== undefined) store.speed = speed;
 
   const previousStatuses = { ...store.statuses };
-  const updatedStatuses: Record<string, DrainStatus> = { ...store.statuses };
+  const updatedStatuses: Record<string, DrainStatus> = {};
   const drainsMap = new Map(drains.map((d) => [d.id, d]));
 
   for (const r of readings) {
@@ -115,6 +133,8 @@ export async function processReadings(readings: Array<{
     const newStatus = assess(drain, history);
     updatedStatuses[r.drain_id] = newStatus;
     store.statuses[r.drain_id] = newStatus;
+    if (r.source !== "device") store.observedAt[r.drain_id] = Date.now();
+    else delete store.observedAt[r.drain_id]; // Real sensors require a separate observation-expiry contract.
 
     // Trigger Guard Task when a drain transitions to RED (level_cm >= bank_cm)
     const prevStatus = previousStatuses[r.drain_id]?.status ?? "green";
@@ -123,7 +143,8 @@ export async function processReadings(readings: Array<{
     }
   }
 
-  // Push updates to Supabase
+  store.revision++;
+  // Mirror only drains that actually received readings; never renew untouched rows.
   try {
     const sb = getServerSupabase();
     const rows = Object.values(updatedStatuses).map((s) => ({
@@ -136,7 +157,7 @@ export async function processReadings(readings: Array<{
       updated_at: new Date().toISOString(),
     }));
 
-    sb.from("drain_status").upsert(rows).then();
+    if (rows.length) sb.from("drain_status").upsert(rows).then();
   } catch (err) {
     console.error("Supabase sync non-blocking error:", err);
   }

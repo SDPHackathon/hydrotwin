@@ -23,6 +23,8 @@ SDP Hackathon T&C cl. 14: everything we use must be lawfully obtained and licens
 | Open-Meteo Elevation API | ground height of each drain zone (baked once into `drains.json`) | data CC BY 4.0; underlying DEM: Copernicus GLO-90. ⚠️ Open-Meteo's free API is for non-commercial use — fine for a prototype; production → their commercial plan or the Copernicus DEM directly | footer + this file |
 | OpenStreetMap Nominatim | Geocoding search for dynamic township addition | ODbL 1.0 / Nominatim Usage Policy (max 1 req/sec, custom User-Agent) | "© OpenStreetMap contributors" |
 | Storm | rainfall pattern | synthetic, made by us (`lib/engine/storm.ts`) — replace with a recorded storm and add its source here | — |
+| HydroTwin demo dry-point model | Deterministic baseline-storm selection of road anchors for every shared township; no real shelter names or opening claims | Original project algorithm/results; road anchors derived from existing OSM bundles under ODbL 1.0 | Simulation-only labels in dashboard/resident portal; © OpenStreetMap contributors. No new service or library. |
+| Browser Geolocation API | One-shot Locate me, processed locally and confirmed as a road anchor; no GPS storage | Browser-provided W3C API, https://www.w3.org/TR/geolocation/ ; no new geocoding dataset/SDK | Browser permission and secure context required; manual street search stays available. |
 
 ## Navigation preview photographs (temporary stock assets)
 

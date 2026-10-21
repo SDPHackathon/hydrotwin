@@ -51,11 +51,11 @@ function routeGeoJson(route: ResponderRoute | null): GeoJSON.FeatureCollection {
 }
 
 function pointsGeoJson(route: ResponderRoute | null): GeoJSON.FeatureCollection {
-  if (!route?.found || !route.origin || !route.destination) return EMPTY;
+  if (!route?.destination) return EMPTY;
   return {
     type: "FeatureCollection",
     features: [
-      { type: "Feature", properties: { kind: "post", label: route.post?.name ?? "Guard post" }, geometry: { type: "Point", coordinates: route.origin } },
+      ...(route.found && route.origin ? [{ type: "Feature" as const, properties: { kind: "post", label: route.post?.name ?? "Guard post" }, geometry: { type: "Point" as const, coordinates: route.origin } }] : []),
       { type: "Feature", properties: { kind: "resident", label: "Resident" }, geometry: { type: "Point", coordinates: route.destination } },
     ],
   };

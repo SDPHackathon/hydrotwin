@@ -1,0 +1,250 @@
+{
+  "schema_version": 1,
+  "area_slug": "bukit-raja",
+  "revision": "baseline-demo-storm-v1:roads-v1-e14d344b:cb568dfa",
+  "network_fingerprint": "roads-v1-e14d344b",
+  "generated_at": "2026-10-21T00:00:00.000Z",
+  "mode": "demo",
+  "destinations": [
+    {
+      "id": "dry-w164880809",
+      "name": "Demo dry point · Jalan Mahkota 1",
+      "area_slug": "bukit-raja",
+      "street_id": "w164880809",
+      "position": {
+        "segment_index": 1,
+        "fraction": 0.5
+      },
+      "entrance": [
+        101.44738050000001,
+        3.0834405
+      ],
+      "kind": "demo",
+      "purpose": "demo_refuge",
+      "verification_state": "candidate",
+      "source": "baseline-demo-storm-v1",
+      "source_id": "w164880809",
+      "source_url": null,
+      "licence": "HydroTwin simulation result; road anchors © OpenStreetMap contributors (ODbL 1.0)",
+      "verified_at": null,
+      "verification_expires_at": null,
+      "availability": "open",
+      "availability_observed_at": null,
+      "availability_expires_at": null,
+      "access": {
+        "network_fingerprint": "roads-v1-e14d344b",
+        "verification_state": "schematic",
+        "expires_at": null
+      },
+      "accessibility": "unknown",
+      "disabled": false,
+      "simulation": {
+        "model": "baseline-demo-storm-v1",
+        "peak_cm": 19.3,
+        "bank_cm": 120,
+        "ever_amber": false,
+        "through_minute": 210
+      }
+    },
+    {
+      "id": "dry-w1230804647",
+      "name": "Demo dry point · Jalan Makyong 6/KU5",
+      "area_slug": "bukit-raja",
+      "street_id": "w1230804647",
+      "position": {
+        "segment_index": 5,
+        "fraction": 0.5
+      },
+      "entrance": [
+        101.4285345,
+        3.089009
+      ],
+      "kind": "demo",
+      "purpose": "demo_refuge",
+      "verification_state": "candidate",
+      "source": "baseline-demo-storm-v1",
+      "source_id": "w1230804647",
+      "source_url": null,
+      "licence": "HydroTwin simulation result; road anchors © OpenStreetMap contributors (ODbL 1.0)",
+      "verified_at": null,
+      "verification_expires_at": null,
+      "availability": "open",
+      "availability_observed_at": null,
+      "availability_expires_at": null,
+      "access": {
+        "network_fingerprint": "roads-v1-e14d344b",
+        "verification_state": "schematic",
+        "expires_at": null
+      },
+      "accessibility": "unknown",
+      "disabled": false,
+      "simulation": {
+        "model": "baseline-demo-storm-v1",
+        "peak_cm": 85.7,
+        "bank_cm": 120,
+        "ever_amber": true,
+        "through_minute": 210
+      }
+    },
+    {
+      "id": "dry-w739555185",
+      "name": "Demo dry point · w739555185",
+      "area_slug": "bukit-raja",
+      "street_id": "w739555185",
+      "position": {
+        "segment_index": 3,
+        "fraction": 0.5
+      },
+      "entrance": [
+        101.43870799999999,
+        3.090198
+      ],
+      "kind": "demo",
+      "purpose": "demo_refuge",
+      "verification_state": "candidate",
+      "source": "baseline-demo-storm-v1",
+      "source_id": "w739555185",
+      "source_url": null,
+      "licence": "HydroTwin simulation result; road anchors © OpenStreetMap contributors (ODbL 1.0)",
+      "verified_at": null,
+      "verification_expires_at": null,
+      "availability": "open",
+      "availability_observed_at": null,
+      "availability_expires_at": null,
+      "access": {
+        "network_fingerprint": "roads-v1-e14d344b",
+        "verification_state": "schematic",
+        "expires_at": null
+      },
+      "accessibility": "unknown",
+      "disabled": false,
+      "simulation": {
+        "model": "baseline-demo-storm-v1",
+        "peak_cm": 85.7,
+        "bank_cm": 120,
+        "ever_amber": true,
+        "through_minute": 210
+      }
+    },
+    {
+      "id": "dry-w164812535",
+      "name": "Demo dry point · w164812535",
+      "area_slug": "bukit-raja",
+      "street_id": "w164812535",
+      "position": {
+        "segment_index": 4,
+        "fraction": 0.5
+      },
+      "entrance": [
+        101.444366,
+        3.0790885
+      ],
+      "kind": "demo",
+      "purpose": "demo_refuge",
+      "verification_state": "candidate",
+      "source": "baseline-demo-storm-v1",
+      "source_id": "w164812535",
+      "source_url": null,
+      "licence": "HydroTwin simulation result; road anchors © OpenStreetMap contributors (ODbL 1.0)",
+      "verified_at": null,
+      "verification_expires_at": null,
+      "availability": "open",
+      "availability_observed_at": null,
+      "availability_expires_at": null,
+      "access": {
+        "network_fingerprint": "roads-v1-e14d344b",
+        "verification_state": "schematic",
+        "expires_at": null
+      },
+      "accessibility": "unknown",
+      "disabled": false,
+      "simulation": {
+        "model": "baseline-demo-storm-v1",
+        "peak_cm": 19.3,
+        "bank_cm": 120,
+        "ever_amber": false,
+        "through_minute": 210
+      }
+    },
+    {
+      "id": "dry-w851295404",
+      "name": "Demo dry point · Jalan Zapin 3G/KU5",
+      "area_slug": "bukit-raja",
+      "street_id": "w851295404",
+      "position": {
+        "segment_index": 5,
+        "fraction": 0.5
+      },
+      "entrance": [
+        101.44450950000001,
+        3.0815175000000004
+      ],
+      "kind": "demo",
+      "purpose": "demo_refuge",
+      "verification_state": "candidate",
+      "source": "baseline-demo-storm-v1",
+      "source_id": "w851295404",
+      "source_url": null,
+      "licence": "HydroTwin simulation result; road anchors © OpenStreetMap contributors (ODbL 1.0)",
+      "verified_at": null,
+      "verification_expires_at": null,
+      "availability": "open",
+      "availability_observed_at": null,
+      "availability_expires_at": null,
+      "access": {
+        "network_fingerprint": "roads-v1-e14d344b",
+        "verification_state": "schematic",
+        "expires_at": null
+      },
+      "accessibility": "unknown",
+      "disabled": false,
+      "simulation": {
+        "model": "baseline-demo-storm-v1",
+        "peak_cm": 19.3,
+        "bank_cm": 120,
+        "ever_amber": false,
+        "through_minute": 210
+      }
+    },
+    {
+      "id": "dry-w164812626",
+      "name": "Demo dry point · Jalan Cendana 3",
+      "area_slug": "bukit-raja",
+      "street_id": "w164812626",
+      "position": {
+        "segment_index": 1,
+        "fraction": 0.5
+      },
+      "entrance": [
+        101.4466715,
+        3.079824
+      ],
+      "kind": "demo",
+      "purpose": "demo_refuge",
+      "verification_state": "candidate",
+      "source": "baseline-demo-storm-v1",
+      "source_id": "w164812626",
+      "source_url": null,
+      "licence": "HydroTwin simulation result; road anchors © OpenStreetMap contributors (ODbL 1.0)",
+      "verified_at": null,
+      "verification_expires_at": null,
+      "availability": "open",
+      "availability_observed_at": null,
+      "availability_expires_at": null,
+      "access": {
+        "network_fingerprint": "roads-v1-e14d344b",
+        "verification_state": "schematic",
+        "expires_at": null
+      },
+      "accessibility": "unknown",
+      "disabled": false,
+      "simulation": {
+        "model": "baseline-demo-storm-v1",
+        "peak_cm": 19.3,
+        "bank_cm": 120,
+        "ever_amber": false,
+        "through_minute": 210
+      }
+    }
+  ]
+}

@@ -1,20 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { RouteDestination, RouteOutcome, RouteResult, StreetFeature } from "@/lib/engine/route";
-
-const messages: Record<RouteOutcome, string> = {
-  found: "Route found",
-  no_destinations: "No safe destinations configured. Add one below.",
-  invalid_origin: "The starting street is missing from the loaded road data.",
-  origin_blocked: "The starting street is flooded. No traversable exit is modeled from this origin.",
-  origin_unknown: "The starting street has no flood status. A route cannot be confirmed.",
-  destination_unavailable: "No selected destination is on a green street with known status.",
-  disconnected: "The supplied road data does not connect this origin to an eligible destination.",
-  no_route: "Flooded roads or roads with unknown status prevent a route to an eligible destination.",
-};
+import type { RouteDestination, RouteResult, StreetFeature } from "@/lib/engine/route";
+import type { EvacuationCatalogue } from "@/lib/engine/evacuation";
+import { ROUTE_MESSAGES } from "@/lib/evacuation/messages";
 
 type Props = {
+  catalogue: EvacuationCatalogue | null;
+  catalogueError: string | null;
+  usingDrafts: boolean;
+  draftDestinations: RouteDestination[];
+  onUseDrafts: (value: boolean) => void;
+  source: "local" | "cloud";
+  onSourceChange: (value: "local" | "cloud") => void;
   streets: StreetFeature[];
   startStreetId: string;
   onStartChange: (id: string) => void;
@@ -41,18 +39,28 @@ export default function EvacuationPanel(p: Props) {
   const saveDestinationName = (id: string) => {
     const trimmedName = editingName.trim();
     if (!trimmedName) return;
-    p.onDestinationsChange(p.destinations.map((destination) => destination.id === id
+    p.onDestinationsChange(p.draftDestinations.map((destination) => destination.id === id
       ? { ...destination, name: trimmedName }
       : destination));
     setEditingId(null);
     setEditingName("");
   };
   return <div className="flex flex-col gap-4 text-xs">
+    <section className="space-y-2 rounded-xl border border-violet-200 bg-violet-50 p-4">
+      <h2 className="font-bold">Automatically selected demo refuge points</h2>
+      <p>{p.catalogue ? `${p.catalogue.destinations.length} road points stayed unflooded during the baseline demo storm.` : p.catalogueError ?? "Assessing the demo storm…"}</p>
+      <p>Chosen by the simulator across connected parts of this township. These are road locations, not verified shelters. Current access must still be green.</p>
+      {p.catalogue?.destinations.length === 0 && <p role="status">No qualifying unflooded road point was found. No destination is invented.</p>}
+      <label className="block space-y-1"><span>Flood source</span><select className={selectClass} value={p.source} onChange={(e) => p.onSourceChange(e.target.value as "local" | "cloud")}>
+        <option value="local">Local simulation</option><option value="cloud">Phone/server simulation · matches residents</option>
+      </select></label>
+      <p>Use Phone/server simulation to match the resident portal.</p>
+    </section>
     <section className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4">
       <h2 className="font-semibold uppercase tracking-wider">Evacuation Route Finder</h2>
       <div className="flex flex-wrap gap-2">
         <button className="rounded-lg border border-violet-300 px-3 py-2 text-violet-800" aria-pressed={p.pickMode === "origin"} onClick={() => p.onPickModeChange(p.pickMode === "origin" ? null : "origin")}>Pin starting point on map</button>
-        <button className="rounded-lg border border-violet-300 px-3 py-2 text-violet-800" aria-pressed={p.pickMode === "destination"} onClick={() => p.onPickModeChange(p.pickMode === "destination" ? null : "destination")}>Pin safe destination on map</button>
+        {p.usingDrafts && <button className="rounded-lg border border-violet-300 px-3 py-2 text-violet-800" aria-pressed={p.pickMode === "destination"} onClick={() => p.onPickModeChange(p.pickMode === "destination" ? null : "destination")}>Pin personal demo destination</button>}
       </div>
       {p.pickMode && <div className="rounded-lg bg-violet-100 p-2 text-violet-900">
         Click a road on the map to place the {p.pickMode === "origin" ? "starting" : "safe destination"} pin. The pin snaps to the nearby road.
@@ -70,18 +78,21 @@ export default function EvacuationPanel(p: Props) {
       </label>
     </section>
     {p.result && <section aria-live="polite" className={`space-y-1.5 rounded-xl border p-3.5 ${p.result.found ? "border-violet-300 bg-violet-50" : "border-amber-300 bg-amber-50"}`}>
-      <h3 className="font-semibold text-stone-900">{messages[p.result.outcome]}</h3>
+      <h3 className="font-semibold text-stone-900">{ROUTE_MESSAGES[p.result.outcome]}</h3>
       {p.result.found && <>
-        <p className="font-medium text-violet-950">{p.result.destination_name} · {p.result.distance_m} m ({Math.ceil(p.result.distance_m / 70)} min walk)</p>
+        <p className="font-medium text-violet-950">{p.result.destination_name} · {p.result.distance_m} m</p>
         {p.result.distance_m === 0 && <p className="text-stone-500">Already at the destination endpoint.</p>}
         {p.result.uses_amber && <p className="text-amber-800">⚠️ Route includes amber roads</p>}
         {(p.result.excluded_streets > 0 || p.result.unknown_streets > 0) && (
-          <p className="text-stone-500">Avoids {p.result.excluded_streets} flooded streets{p.result.unknown_streets > 0 ? `, ${p.result.unknown_streets} unverified` : ""}.</p>
+          <p className="text-stone-500">Township totals: {p.result.excluded_streets} flooded streets{p.result.unknown_streets > 0 ? `, ${p.result.unknown_streets} unknown` : ""}. These counts do not describe a previous route.</p>
         )}
       </>}
     </section>}
-    <section className="space-y-3 rounded-xl border border-stone-200 p-4">
-      <h3 className="font-semibold">Configure safe destinations</h3>
+    <details className="space-y-3 rounded-xl border border-stone-200 p-4">
+      <summary className="cursor-pointer font-semibold">Personal demo drafts</summary>
+      <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={p.usingDrafts} onChange={(e) => p.onUseDrafts(e.target.checked)} />Use personal drafts instead of shared destinations</label>
+      <p>Stored only on this device. Never shared with residents or promoted to verified centres.</p>
+      {p.usingDrafts && <>
       <label className="block space-y-1"><span>Destination name</span>
         <input className={selectClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="Safe destination name" maxLength={80} />
       </label>
@@ -89,10 +100,10 @@ export default function EvacuationPanel(p: Props) {
         <select className={selectClass} value={streetId} onChange={(e) => setStreetId(e.target.value)}>{options}</select>
       </label>
       <button className="rounded-lg bg-violet-700 px-3 py-2 font-semibold text-white disabled:opacity-50" disabled={!name.trim() || !streetId} onClick={() => {
-        p.onDestinationsChange([...p.destinations, { id: crypto.randomUUID(), name: name.trim(), street_id: streetId, kind: "demo" }]);
+        p.onDestinationsChange([...p.draftDestinations, { id: crypto.randomUUID(), name: name.trim(), street_id: streetId, kind: "demo" }]);
         setName("");
       }}>Add safe destination</button>
-      <ul className="space-y-2">{p.destinations.map((d) => <li className="flex flex-wrap items-center justify-between gap-2" key={d.id}>
+      <ul className="space-y-2">{p.draftDestinations.map((d) => <li className="flex flex-wrap items-center justify-between gap-2" key={d.id}>
         {editingId === d.id ? <>
           <label className="sr-only" htmlFor={`destination-name-${d.id}`}>Edit name for {d.name}</label>
           <input
@@ -116,11 +127,13 @@ export default function EvacuationPanel(p: Props) {
           <span>{d.name} · {d.street_id}</span>
           <div className="flex gap-3">
             <button aria-label={`Edit ${d.name}`} className="text-violet-800" onClick={() => { setEditingId(d.id); setEditingName(d.name); }}>Edit</button>
-            <button aria-label={`Remove ${d.name}`} className="text-rose-700" onClick={() => p.onDestinationsChange(p.destinations.filter((item) => item.id !== d.id))}>Remove</button>
+            <button aria-label={`Remove ${d.name}`} className="text-rose-700" onClick={() => p.onDestinationsChange(p.draftDestinations.filter((item) => item.id !== d.id))}>Remove</button>
           </div>
         </>}
       </li>)}</ul>
       <p>{p.saveError ? "Device storage is unavailable; these points last for this session only." : "Saved on this device for this township."}</p>
-    </section>
+      </>}
+    </details>
+    <p className="text-[11px] text-stone-500">Demo only. Simulated drain zones and per-street depth, not hydraulics. Green-first walking routes describe the supplied snapshot, not future conditions or accessibility.</p>
   </div>;
 }

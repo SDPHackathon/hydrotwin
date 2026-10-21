@@ -20,12 +20,20 @@ export interface RouteDestination {
   id: string;
   name: string;
   street_id: string;
-  kind: "demo";
+  kind: "demo" | "verified";
   position?: RoadPosition;
 }
 
 export type RouteOutcome = "found" | "no_destinations" | "invalid_origin" | "origin_blocked" |
-  "origin_unknown" | "destination_unavailable" | "disconnected" | "no_route";
+  "origin_unknown" | "destination_unavailable" | "disconnected" | "no_route" | "conditions_unavailable" | "catalogue_unavailable";
+
+export interface RouteLeg {
+  street_id: string;
+  drain_id: string;
+  status: "green" | "amber";
+  coordinates: [number, number][];
+  distance_m: number;
+}
 
 export interface RouteResult {
   found: boolean;
@@ -39,10 +47,12 @@ export interface RouteResult {
   excluded_streets: number;
   unknown_streets: number;
   uses_amber: boolean;
+  amber_m: number;
+  legs: RouteLeg[];
 }
 
 type Coord = [number, number];
-type Edge = { to: string; distance: number; amber: boolean };
+type Edge = { to: string; distance: number; amber: boolean; street_id: string; drain_id: string };
 const key = (c: number[]) => `${c[0]},${c[1]}`;
 const coord = (c: number[]): Coord => [c[0], c[1]];
 const distance = (a: number[], b: number[]) => Math.hypot(
@@ -62,13 +72,14 @@ function anchor(street: StreetFeature | undefined, position?: RoadPosition): Coo
 }
 
 /** Walks the supplied road graph. Shared vertices connect roads; visual crossings do not. */
-export function findSafeRoute(
+function searchSafeRoute(
   streets: StreetFeature[],
   originStreetId: string,
   destinations: RouteDestination[],
   statuses: Record<string, Status | undefined>,
   selectedDestinationId: string | null = null,
   originPosition?: RoadPosition,
+  allowAmber = true,
 ): RouteResult {
   const byId = new Map(streets.map((s) => [s.properties.id, s]));
   const originStreet = byId.get(originStreetId);
@@ -80,19 +91,20 @@ export function findSafeRoute(
     found: false, outcome, coordinates: [], origin: origin ? coord(origin) : null,
     destination: selected ? anchor(byId.get(selected.street_id), selected.position) : null,
     distance_m: 0, destination_name: selected?.name ?? "", destination_id: selected?.id ?? null,
-    excluded_streets: excluded, unknown_streets: unknown, uses_amber: false,
+    excluded_streets: excluded, unknown_streets: unknown, uses_amber: false, amber_m: 0, legs: [],
   });
   if (!destinations.length) return failure("no_destinations");
   if (!origin || !originStreet) return failure("invalid_origin");
   const originStatus = statuses[originStreet.properties.drain_id];
   if (!originStatus) return failure("origin_unknown");
   if (originStatus === "red") return failure("origin_blocked");
+  if (!allowAmber && originStatus === "amber") return failure("no_route");
 
   const eligible = destinations.filter((d) => {
     const street = byId.get(d.street_id);
     return (!selectedDestinationId || d.id === selectedDestinationId) &&
       anchor(street, d.position) && street && statuses[street.properties.drain_id] === "green";
-  }).sort((a, b) => a.id.localeCompare(b.id));
+  }).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   if (!eligible.length) return failure("destination_unavailable");
 
   const graph = new Map<string, Edge[]>();
@@ -119,17 +131,18 @@ export function findSafeRoute(
       points.set(a, segment[j]); points.set(b, segment[j + 1]);
       fullGraph.set(a, [...(fullGraph.get(a) ?? []), b]);
       fullGraph.set(b, [...(fullGraph.get(b) ?? []), a]);
-      if (!state || state === "red") continue;
+      if (!state || state === "red" || (!allowAmber && state === "amber")) continue;
       const edgeDistance = distance(segment[j], segment[j + 1]);
-      graph.set(a, [...(graph.get(a) ?? []), { to: b, distance: edgeDistance, amber: state === "amber" }]);
-      graph.set(b, [...(graph.get(b) ?? []), { to: a, distance: edgeDistance, amber: state === "amber" }]);
+      const evidence = { distance: edgeDistance, amber: state === "amber", street_id: street.properties.id, drain_id: street.properties.drain_id };
+      graph.set(a, [...(graph.get(a) ?? []), { to: b, ...evidence }]);
+      graph.set(b, [...(graph.get(b) ?? []), { to: a, ...evidence }]);
       }
     }
   }
 
   const start = key(origin);
   const distances = new Map<string, number>([[start, 0]]);
-  const previous = new Map<string, { from: string; amber: boolean }>();
+  const previous = new Map<string, Edge & { from: string }>();
   const pending = new Set<string>([start]);
   const visited = new Set<string>();
   while (pending.size) {
@@ -143,7 +156,7 @@ export function findSafeRoute(
       const next = best + edge.distance;
       if (next < (distances.get(edge.to) ?? Infinity)) {
         distances.set(edge.to, next);
-        previous.set(edge.to, { from: current, amber: edge.amber });
+        previous.set(edge.to, { ...edge, from: current });
         pending.add(edge.to);
       }
     }
@@ -167,11 +180,14 @@ export function findSafeRoute(
       ? "no_route" : "disconnected");
   }
   const targetCoord = anchor(byId.get(chosen.street_id), chosen.position)!;
-  let current = key(targetCoord), usesAmber = false;
+  let current = key(targetCoord), usesAmber = originStatus === "amber";
+  const legs: RouteLeg[] = [];
   const path: Coord[] = [coord(targetCoord)];
   while (current !== start) {
     const prev = previous.get(current)!;
     usesAmber ||= prev.amber;
+    legs.push({ street_id: prev.street_id, drain_id: prev.drain_id, status: prev.amber ? "amber" : "green",
+      coordinates: [points.get(prev.from)!, points.get(current)!], distance_m: prev.distance });
     current = prev.from;
     path.push(points.get(current)!);
   }
@@ -180,5 +196,17 @@ export function findSafeRoute(
     destination: coord(targetCoord), distance_m: Math.round(bestDistance),
     destination_name: chosen.name, destination_id: chosen.id,
     excluded_streets: excluded, unknown_streets: unknown, uses_amber: usesAmber,
+    legs: legs.reverse(), amber_m: legs.reduce((sum, leg) => sum + (leg.status === "amber" ? leg.distance_m : 0), 0),
   };
+}
+
+/** Green-only routes take priority; amber is an explicit fallback, never red/unknown. */
+export function findSafeRoute(
+  streets: StreetFeature[], originStreetId: string, destinations: RouteDestination[],
+  statuses: Record<string, Status | undefined>, selectedDestinationId: string | null = null,
+  originPosition?: RoadPosition,
+): RouteResult {
+  const green = searchSafeRoute(streets, originStreetId, destinations, statuses, selectedDestinationId, originPosition, false);
+  return green.found || !["no_route", "disconnected"].includes(green.outcome) ? green :
+    searchSafeRoute(streets, originStreetId, destinations, statuses, selectedDestinationId, originPosition, true);
 }

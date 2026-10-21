@@ -5,9 +5,10 @@ import { useState } from "react";
 interface Props {
   isOpen: boolean;
   onClose: () => void;
+  areaSlug: string;
 }
 
-export default function MobileLinksModal({ isOpen, onClose }: Props) {
+export default function MobileLinksModal({ isOpen, onClose, areaSlug }: Props) {
   const [origin] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return window.location.origin;
@@ -21,16 +22,16 @@ export default function MobileLinksModal({ isOpen, onClose }: Props) {
   const links = [
     {
       title: "Phone Storm Controller",
-      path: "/control",
+      path: `/control?area=${encodeURIComponent(areaSlug)}`,
       badge: "LIVE-3",
       desc: "Drive the storm, test speeds, and inject manual flood levels per drain for judges.",
       icon: "🎛️",
     },
     {
       title: "Resident Portal",
-      path: "/resident",
+      path: `/resident?area=${encodeURIComponent(areaSlug)}`,
       badge: "LIVE-5",
-      desc: "Simulate a resident receiving early warnings, action prompts, and SOS check-ins.",
+      desc: "Locate a starting road or search street hints, then view demo routing and request assistance.",
       icon: "📱",
     },
     {

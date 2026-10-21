@@ -54,7 +54,7 @@ type Props = {
 
 const byStatus = (fallback: string) => [
   "match",
-  ["coalesce", ["feature-state", "status"], "green"],
+  ["coalesce", ["feature-state", "status"], "unknown"],
   "red",
   STATUS_COLOR.red,
   "amber",
@@ -494,12 +494,12 @@ export default function TownshipMap({
         ...(routeDestination ? [{ type: "Feature" as const, properties: { label: "D" }, geometry: { type: "Point" as const, coordinates: routeDestination } }] : []),
       ],
     });
-    const routeKey = JSON.stringify(safeRoute);
+    const routeKey = JSON.stringify([routeOrigin, routeDestination]);
     if (safeRoute?.length && routeKey !== lastRoute.current) {
       const lngs = safeRoute.map((point) => point[0]);
       const lats = safeRoute.map((point) => point[1]);
       m.fitBounds([[Math.min(...lngs), Math.min(...lats)], [Math.max(...lngs), Math.max(...lats)]], {
-        padding: 45, maxZoom: 16, duration: 500,
+        padding: 45, maxZoom: 16, duration: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500,
       });
     }
     lastRoute.current = routeKey;

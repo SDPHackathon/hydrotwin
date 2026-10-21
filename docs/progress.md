@@ -1,5 +1,7 @@
 # Progress
 
+**Current (21 Oct):** completed the resumed algorithmic demo dry-point and location-based resident flow. Validation and limitations are recorded below; `docs/refuge-location-handoff.md` is now a completion record.
+
 Submission: **Fri 23 Oct, 11:59 PM** — pitch deck (≤10 slides) · 5-min video · this repo (public or judge-accessible) · optional docs.
 Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 
@@ -45,6 +47,30 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] Installable phone pages (manifests + icons) · README phone section (same Wi-Fi link, Add to Home Screen)
 - [ ] Azim's phone on the laptop's network: Add to Home Screen, Start shift beep, full loop phone ↔ phone — use a phone hotspot (big shared Wi-Fi blocks phone ↔ laptop, 19 Oct)
 
+## Algorithmic dry points and location-based resident portal (21 Oct) ✅
+
+- [x] Deterministic baseline replay selects never-red road anchors across connected mapped components for built-in, cached and new shared townships. Current selections: Bukit Raja 6, Cyberjaya 13, Taman Sri Muda 4. Baseline dryness never overrides current green access; components without suitable points report failure. Flood datasets unchanged; no AI API or added library.
+- [x] Resident persona removed; one-shot Locate me with explicit confirmation, local snapping and HTTPS/accuracy/coverage checks; manual street/ID hints with approximate-endpoint disclosure. No raw GPS storage/transmission or journey tracking.
+- [x] Bounded laptop-session township sharing and automatic cached-download republishing; per-area simulator state/evidence, area-aware controller and phone links, no cross-area D01 collisions. Existing cached bundles validate, including Cyberjaya's complete OSM way extending beyond its query box.
+- [x] Anonymous, capability-based demo help retains its original road/area; guard lifecycle uses the existing pure rules. Other townships do not invent guard posts. Runtime sharing/help are not durable Supabase records; reopen the dashboard after restart to reshare custom downloads.
+- [x] Bundled Node 24: clean lint, 100 unit tests, TypeScript and default Turbopack production build. Local production HTTP harnesses passed for all three built-ins and a disposable newly shared clone: shared revisions, idempotent publishing, conflicting selectors, changed-network rejection, area isolation, invalid anchors, red origin, six-second expiry/partial evidence and help accept/safe/resolve/cancel. Temporary production server stopped afterward.
+- [x] Production browser: manual hints/confirmation, mapped route, flooded-origin withdrawal, help create/accept/resolve, unchanged help location after route-origin change, EN/BM switching, independent Cyberjaya controller, matching Cyberjaya dashboard/resident route (411 m), area-aware phone links and newly shared area in a fresh tab. Deliberately stopping the temporary server withdrew guidance and marked conditions unknown. Maps rendered; verification tab warning/error logs were empty before the intentional outage. Narrow resident content 439 px and dashboard 1280 px had no horizontal overflow. Preview saved outside repo as resident-location-route.png.
+- [ ] Physical-phone GPS permission/accuracy, installation, vibration, standalone mode and map-provider denial remain unverified. No fresh upstream OSM download was performed during this continuation: the sharing path was tested with existing bundles and a new session clone. Operational shelter verification, durable authenticated multi-user service and real-world pedestrian access are future work.
+
+Demo/pitch guide: `docs/evacuation-demo.md`. These are simulated road points, not verified shelters.
+
+## First shared-destination iteration (21 Oct, superseded by the location flow above)
+
+- [x] Versioned shared catalogue: five explicitly fictional Bukit Raja refuges, validated against unchanged flood-road geometry/zone assignments; automatically loaded on dashboard and resident portal. Personal pins remain opt-in device drafts.
+- [x] Pure eligibility and green-first routing with amber fallback, ordered street/drain legs, deterministic destination ties, blocked/unknown origins and explicit disconnected coverage. No responder red-road permissions are reused.
+- [x] Per-drain simulator evidence, no initialized green at process startup, independent six-second expiry, paused/completed frozen conditions, full route/status snapshot and no local fallback in phone mode. Supabase events trigger laptop snapshot refetch instead of mixing sources; actual readings alone renew evidence.
+- [x] Embedded lazy-loaded resident map, path-specific flooding alerts, no walking line when blocked/stale/offline, immediate resident-switch clearing, non-overlapping polls and independent help-task tracking. Fixed street-origin and assistance limitations are visible. New resident route messages support EN/BM.
+- [x] Validation on bundled Node 24: clean lint, 92 unit tests, TypeScript and normal production Turbopack build pass outside the restricted sandbox. Webpack production fallback also passed. Local HTTP harness verified nine residents, matching catalogue revisions, cache/error contracts, metadata-only/partial updates and controller expiry/recovery.
+- [x] Browser: startup unknown; automatic route; dashboard/resident agreement (refuge C, 1506 m for Gamelan 1F); previous-route flood alert; blocked origin with no line (~1096 ms observed update); resident switch; help request → guard accept → resolution shown to resident. Maps rendered; no warning/error console entries in verification tabs. Layouts inspected at observed 439 px and 1280 px widths with no document overflow. Closure/expiry/detour cases additionally covered by deterministic unit fixtures.
+- [ ] Physical-device installation, vibration, standalone display mode, deliberate browser network-loss/recovery and denied map-resource checks remain unverified; engine/HTTP expiry and failure withdrawal are covered. Real destinations, authenticated Supabase catalogue management and authorised feeds remain a later release.
+
+Demo instructions, fixture harness and pitch limitations: `docs/evacuation-demo.md`. This is an explicitly simulated release, not verified real-world evacuation guidance.
+
 ### Better help-request management (21 Oct) ✅
 - [x] Resident help cancellation with explicit confirmation modal prompt (`/resident`)
 - [x] Guard live cancellation alerts with banner notice, chime and vibration cues, card state update (`/guard`)
@@ -89,6 +115,7 @@ Tick a box in the same commit that finishes it. IDs → `docs/spec.md`.
 - [x] 20 Oct: implemented map-contained demo rain with intensity and capped playback response; shared local/phone weather labels, pause/reset/completion, six-second controller/API freshness, static reduced-motion rendering and an animation toggle. Plan upgrade replay uses local weather; development peak previews and Traffic omit the overlay. Lint and all 73 tests pass; production Webpack build passes with Node 24 and network access for existing Google fonts. Default Turbopack build stalled and was stopped, consistent with the previously documented environment issue. Browser verified visible rain, 4× local playback, pause/reset/toggle/zoom, local Plan source, no development overlay, and phone 2×/10× speed, pause/reset, completion and sync recovery; no console errors in the verification tab. Physical-device and reduced-motion browser checks remain unverified.
 
 ## UI Navigation & Polish (18–19 Oct)
+- [x] 21 Oct: tolerate browser-extension body attributes (`cz-shortcut-listen`) during hydration, scoped to the body element so child mismatches still warn. Verified the exact attribute through a temporary production HTML proxy and interactive language switching with no hydration warning; lint, all 92 tests and production build pass.
 - [x] 18 Oct: map-centered expanding mode navigation replaces sidebar tabs; animated label entrance, hover/focus dashes and image crossfades, keyboard selection/Escape, reduced-motion support; licensed replaceable local stock images
 - [x] 19 Oct: swapped township and mode navigation positions; compact sidebar mode tabs, expanding map township picker with current location label, hover/focus previews, scrollable downloaded locations and download action; responsive list layout
 - [x] 19 Oct: mode switches blur the map and panel before changing content, then sharpen; styles imported directly by Dashboard to fix stale development CSS; captured intermediate blur for all three top-center tabs on localhost:3000 and verified return to clear
