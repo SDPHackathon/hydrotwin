@@ -486,11 +486,6 @@ export default function GuardPage() {
         badge={language === "en" ? "Duty Desk" : "Meja Kawalan"}
         badgeClassName="bg-stone-200 text-stone-800"
         subtitle={translate(language, "guardSubtitle")}
-        links={[
-          { href: "/", label: translate(language, "map") },
-          { href: "/control", label: translate(language, "control") },
-          { href: "/resident", label: translate(language, "resident") },
-        ]}
         language={language}
         onToggleLanguage={toggleLanguage}
       />

@@ -17,6 +17,14 @@ export const HELP_TYPES: ReadonlyArray<{ id: HelpType; label: string }> = [
 ];
 export const MAX_PEOPLE = 10;
 export const MAX_NOTE_CHARS = 80;
+export const MAX_HELP_NAME_CHARS = 80;
+
+export function parseHelpName(input: unknown): string {
+  if (typeof input !== "string" || /[\u0000-\u001f\u007f]/.test(input)) throw new Error("Enter a valid name");
+  const name = input.trim().replace(/\s+/g, " ");
+  if (!name || name.length > MAX_HELP_NAME_CHARS) throw new Error(`Name must be 1–${MAX_HELP_NAME_CHARS} characters`);
+  return name;
+}
 
 export interface HelpRequest {
   help_type: HelpType;

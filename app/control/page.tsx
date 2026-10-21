@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { rainAt, STORM_MINUTES } from "@/lib/engine/storm";
 import { stepLevel } from "@/lib/engine/sim";
 import type { Drain, DrainStatus } from "@/lib/engine/types";
@@ -144,11 +143,6 @@ function ControlTownship({ bundle, areas, onAreaChange }: { bundle: RouteTownshi
               <span className={`inline-block w-2 h-2 rounded-full ${syncStatus === "synced" ? "bg-emerald-500" : syncStatus === "syncing" ? "bg-amber-500 animate-pulse" : "bg-rose-500"}`} />
             </div>
             <p className="text-[11px] text-stone-500">{bundle.area.name} · Live Phone Controller</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <Link href={`/?area=${encodeURIComponent(areaSlug)}`} className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium">Map</Link>
-            <Link href={`/resident?area=${areaSlug}`} className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium">Resident</Link>
-            <Link href="/guard" className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium">Guard</Link>
           </div>
         </div>
       </header>

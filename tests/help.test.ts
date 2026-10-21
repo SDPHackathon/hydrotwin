@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  applyTaskAction, findResponderRoute, parseHelpRequest, MAX_NOTE_CHARS, WATER_PENALTY,
+  applyTaskAction, findResponderRoute, parseHelpName, parseHelpRequest, MAX_HELP_NAME_CHARS, MAX_NOTE_CHARS, WATER_PENALTY,
   type GuardPost,
 } from "../lib/engine/help.ts";
 import type { StreetFeature } from "../lib/engine/route.ts";
@@ -13,6 +13,15 @@ import { rainAt, STORM_MINUTES } from "../lib/engine/storm.ts";
 import { assess } from "../lib/engine/risk.ts";
 
 // --- help request ---------------------------------------------------------------------------
+
+test("help names are required, bounded and normalized without excluding Unicode names", () => {
+  assert.equal(parseHelpName("  Demo   Resident  "), "Demo Resident");
+  assert.equal(parseHelpName("Demo José"), "Demo José");
+  assert.equal(parseHelpName("A".repeat(MAX_HELP_NAME_CHARS)).length, MAX_HELP_NAME_CHARS);
+  for (const value of [undefined, null, 4, {}, "", "   ", "A".repeat(MAX_HELP_NAME_CHARS + 1), "Demo\nResident", "Demo\u0000Resident"]) {
+    assert.throws(() => parseHelpName(value));
+  }
+});
 
 test("a bare check-in becomes a plain 'something else, 1 person' request", () => {
   const parsed = parseHelpRequest({});

@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { applyTaskAction, type HelpRequest, type TaskAction } from "@/lib/engine/help";
+import { applyTaskAction, parseHelpName, type HelpRequest, type TaskAction } from "@/lib/engine/help";
 import type { GuardTask, TaskOutcome } from "@/lib/engine/types";
 import type { RoadPoint } from "@/lib/engine/route";
 import { readSharedTownship } from "@/lib/shared-townships";
@@ -13,7 +13,8 @@ function prune() {
 }
 export function locationTasks() { prune(); return [...sessions.values()].map((s) => structuredClone(s.task)); }
 export function readLocationHelp(token: string) { prune(); return sessions.get(token)?.task ?? null; }
-export async function requestLocationHelp(area: string, origin: RoadPoint, request: HelpRequest, token?: string) {
+export async function requestLocationHelp(area: string, origin: RoadPoint, request: HelpRequest, nameInput: unknown, token?: string) {
+  const name = parseHelpName(nameInput);
   prune();
   const bundle = await readSharedTownship(area);
   const street = bundle?.streets.features.find((s) => s.properties.id === origin?.street_id), p = origin?.position;
@@ -21,12 +22,12 @@ export async function requestLocationHelp(area: string, origin: RoadPoint, reque
   const existing = token ? sessions.get(token) : null;
   if (existing && !["done", "cancelled"].includes(existing.task.state)) {
     if (existing.task.area_slug !== area || existing.task.street_id !== origin.street_id || JSON.stringify(existing.task.position) !== JSON.stringify(p)) throw new Error("Cancel or finish your existing help request before moving its location");
-    Object.assign(existing.task, request, { check_in_state: "need_help" }); existing.touched = Date.now();
+    Object.assign(existing.task, request, { resident_name: name, check_in_state: "need_help" }); existing.touched = Date.now();
     return { token: existing.token, task: existing.task };
   }
   if (sessions.size >= 300) throw new Error("The demo desk has reached its session limit");
   const sessionToken = randomUUID();
-  const task: GuardTask = { id: `location-${randomUUID()}`, resident_id: randomUUID(), resident_name: "Demo location request", needs: null,
+  const task: GuardTask = { id: `location-${randomUUID()}`, resident_id: randomUUID(), resident_name: name, needs: null,
     area_slug: area, area_name: bundle!.area.name, position: { ...p }, street_id: street.properties.id, street_name: street.properties.name || street.properties.id,
     drain_id: street.properties.drain_id, state: "open", created_at: new Date().toISOString(), check_in_state: "need_help", ...request };
   sessions.set(sessionToken, { token: sessionToken, task, touched: Date.now() });

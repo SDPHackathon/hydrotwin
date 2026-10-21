@@ -60,7 +60,7 @@ const distance = (a: number[], b: number[]) => Math.hypot(
   (b[1] - a[1]) * 110574,
 );
 
-function anchor(street: StreetFeature | undefined, position?: RoadPosition): Coord | null {
+export function anchor(street: StreetFeature | undefined, position?: RoadPosition): Coord | null {
   const coords = street?.geometry.coordinates;
   if (!coords?.length) return null;
   if (!position) return coord(coords[0]);

@@ -2,11 +2,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as LibreMap } from "maplibre-gl";
 import type { StreetFeature } from "@/lib/engine/route";
-import type { RouteEnvelope } from "@/lib/engine/evacuation";
+import { eligibleDestinations, type RouteEnvelope } from "@/lib/engine/evacuation";
+import { anchor } from "@/lib/engine/route";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 const EMPTY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
-export default function EvacuationRouteMap({ streets, envelope }: { streets: StreetFeature[]; envelope: RouteEnvelope }) {
+export default function EvacuationRouteMap({ streets, envelope, language = "en" }: { streets: StreetFeature[]; envelope: RouteEnvelope; language?: "en" | "bm" }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<LibreMap | null>(null);
   const [ready, setReady] = useState(false);
@@ -33,8 +34,11 @@ export default function EvacuationRouteMap({ streets, envelope }: { streets: Str
         instance.addLayer({ id: "evac-casing", type: "line", source: "evac-route", paint: { "line-color": "#ffffff", "line-width": 9 } }, label);
         instance.addLayer({ id: "evac-route", type: "line", source: "evac-route", paint: { "line-color": "#6d28d9", "line-width": 5 } }, label);
         instance.addLayer({ id: "evac-points", type: "circle", source: "evac-points", paint: {
-          "circle-radius": 7, "circle-color": ["match", ["get", "kind"], "origin", "#1c1917", "#7c3aed"], "circle-stroke-color": "#ffffff", "circle-stroke-width": 2,
+          "circle-radius": 8, "circle-color": ["match", ["get", "kind"], "origin", "#1c1917", "available", "#15803d", "#78716c"], "circle-stroke-color": "#ffffff", "circle-stroke-width": 2,
         } });
+        instance.addLayer({ id: "evac-point-labels", type: "symbol", source: "evac-points", layout: {
+          "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-offset": [0, 1.4], "text-anchor": "top",
+        }, paint: { "text-color": "#1c1917", "text-halo-color": "#ffffff", "text-halo-width": 2 } });
         setReady(true);
       });
     }).catch(() => { if (active) setFailed(true); });
@@ -47,23 +51,32 @@ export default function EvacuationRouteMap({ streets, envelope }: { streets: Str
     const roads: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: streets.map((s) => ({ type: "Feature", geometry: s.geometry as GeoJSON.LineString,
       properties: { status: envelope.statuses[s.properties.drain_id]?.status ?? "unknown" } })) };
     const line: GeoJSON.FeatureCollection = route.found && route.coordinates.length > 1 ? { type: "FeatureCollection", features: [{ type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: route.coordinates } }] } : EMPTY;
-    const points: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: route.found ? [
-      { type: "Feature", properties: { kind: "origin" }, geometry: { type: "Point", coordinates: route.origin! } },
-      { type: "Feature", properties: { kind: "destination" }, geometry: { type: "Point", coordinates: route.destination! } },
-    ] : [] };
+    const current = envelope.conditions === "current" || envelope.conditions === "frozen";
+    const eligible = new Set(current && envelope.catalogue ? eligibleDestinations(envelope.catalogue,
+      Object.fromEntries(Object.entries(envelope.statuses).map(([id, s]) => [id, s.status])), streets, envelope.calculated_at).map(d => d.id) : []);
+    const points: GeoJSON.FeatureCollection<GeoJSON.Point> = { type: "FeatureCollection", features: [
+      ...(route.origin ? [{ type: "Feature" as const, properties: { kind: "origin", label: language === "bm" ? "Lokasi anda" : "Your location" }, geometry: { type: "Point" as const, coordinates: route.origin } }] : []),
+      ...(envelope.catalogue?.destinations.flatMap(d => {
+        const coordinates = anchor(streets.find(s => s.properties.id === d.street_id), d.position);
+        const available = eligible.has(d.id);
+        return coordinates ? [{ type: "Feature" as const, properties: { kind: available ? "available" : "unavailable",
+          label: available ? (language === "bm" ? "Titik selamat" : "Safe point") : (language === "bm" ? "Tidak tersedia" : "Unavailable") },
+          geometry: { type: "Point" as const, coordinates } }] : [];
+      }) ?? []),
+    ] };
     (m.getSource("evac-streets") as GeoJSONSource)?.setData(roads);
     (m.getSource("evac-route") as GeoJSONSource)?.setData(line);
     (m.getSource("evac-points") as GeoJSONSource)?.setData(points);
-    const nextFit = `${envelope.resident_id}:${route.origin?.join()}:${route.destination_id}`;
-    if (route.found && nextFit !== fitKey.current) {
+    const nextFit = `${envelope.resident_id}:${route.origin?.join()}:${route.found ? route.destination_id : "overview"}:${envelope.catalogue_revision}`;
+    const framing = route.found ? route.coordinates : points.features.map(f => f.geometry.coordinates);
+    if (framing.length && nextFit !== fitKey.current) {
       fitKey.current = nextFit;
-      const xs = route.coordinates.map((c) => c[0]), ys = route.coordinates.map((c) => c[1]);
+      const xs = framing.map((c) => c[0]), ys = framing.map((c) => c[1]);
       m.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: 35, maxZoom: 16, duration: 0 });
     }
-  }, [ready, streets, envelope]);
+  }, [ready, streets, envelope, language]);
   return <div className="space-y-1">
-    <div ref={container} role="region" aria-label="Simulated evacuation route map" className="h-60 w-full overflow-hidden rounded-lg bg-stone-200" />
+    <div ref={container} role="region" aria-label="Simulated evacuation route map" className="h-60 w-full overflow-hidden rounded-lg border border-stone-200 bg-stone-100" />
     {failed && <p className="text-xs text-amber-900">Some map resources are unavailable. Read the route status below; help remains available.</p>}
-    <p className="text-[10px] text-stone-500">Map © OpenStreetMap contributors (ODbL) · OpenFreeMap / OpenMapTiles · MapLibre</p>
   </div>;
 }

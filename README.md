@@ -31,18 +31,24 @@ drain sensors (simulated) → risk engine → street status → map · resident 
 - **Risk engine** (`lib/engine/risk.ts`): red when a drain overflows; amber at 70 % full or when red is under 30 minutes away. Rules: [`docs/data-contracts.md`](docs/data-contracts.md).
 - **Simulator** (`lib/engine/sim.ts`): each minute, level rises with rain × how low the ground is, and falls with the drain's outflow. Low-lying zones flood first.
 - **Map**: MapLibre GL JS on OpenFreeMap, with OpenStreetMap streets and buildings.
-- **Demo rain**: falling streaks over the map build and ease with the synthetic rainfall curve; replay speed adds a capped visual boost. The map label shows running/paused/draining/complete state, rainfall and speed. Pause freezes rain, reset clears it, and “Rain animation” hides particles without stopping the simulation; reduced motion uses a static cue. Phone weather follows Bukit Raja's controller and reports lost sync if a running phone stops updating. This is a screen-space visual effect, not physical rain or building occlusion. Rain ends at minute 150; replay continues to minute 210 for drainage. Traffic and development peak previews show no rain.
+- **Demo rain**: falling streaks over the map build and ease with the synthetic rainfall curve; replay speed adds a capped visual boost. The map label shows running/paused/draining/complete state, rainfall and speed. Pause freezes rain, reset clears it, and “Rain animation” hides particles without stopping the simulation; reduced motion uses a static cue. Web weather always follows the local dashboard storm. This is a screen-space visual effect, not physical rain or building occlusion. Rain ends at minute 150; replay continues to minute 210 for drainage. Traffic and development peak previews show no rain.
 - **Backend**: Supabase (Postgres, Realtime, Auth, Edge Functions).
 
 ## On a phone — resident, guard, control
 
+Click **Phone Links** on the dashboard to open `/phone?area=<selected-township>` in a new browser tab. This simple landing page offers **Resident**, **Storm Control** and **Guard**. Resident and Control keep the selected township; Guard opens the shared duty desk. The mobile pages no longer have cross-page links in their top bars. Use browser Back to return to the chooser. Existing direct links and installed shortcuts still work.
+
+The resident page starts with **Use my location**, **Search streets across all demo areas**, or **Choose on map**. Residents confirm a mapped road point and its coverage boundary before conditions and routes load. Search spans the shared demo catalogue; no township choice is required. Map outlines show the planner's downloaded sections, not entire towns or official boundaries. Locations outside those sections, or without a loaded road within 75 m, remain unavailable; overlapping sections require a choice. Street-name matches use an approximate road point that can be adjusted on the map. With permission, one-shot GPS coordinates are sent in a request body to this app's server for coverage matching; they are not stored or sent to a geocoder. HTTPS is required for phone geolocation; street search and map selection also work over the local HTTP link.
+
+When a resident route is available, **Open in Google Maps** opens walking directions between the same selected road anchors. Google calculates its own path without HydroTwin's simulated flood restrictions, so it may differ from the route shown here. The link disappears when HydroTwin withdraws the route. Endpoints are shared only when the resident taps the link; no API key or embedded Google map is used.
+
 The laptop running `npm run dev` **is** the server. Put the phone on the same Wi-Fi and open
-`http://<laptop-ip>:3000/resident`, `/guard` or `/control` (`ipconfig getifaddr en0` on macOS, `ipconfig` on
-Windows gives the IP; the dashboard's **📱 Phone Links** button lists the paths). **Add to Home Screen** installs
+`http://<laptop-ip>:3000/phone` (`ipconfig getifaddr en0` on macOS, `ipconfig` on
+Windows gives the IP; add `?area=<township-slug>` to keep a specific township). **Add to Home Screen** installs
 each page as an app icon — iPhone: Share → Add to Home Screen (opens full-screen); Android: ⋮ → Add to Home
 screen (full-screen needs HTTPS, so over the Wi-Fi link it opens as a shortcut). Alerts work while the page is
-open: the guard desk sounds new help calls after one tap on **Start shift**, Android phones vibrate. The phone
-pages are Bukit Raja only.
+open: the guard desk sounds new help calls after one tap on **Start shift**, Android phones vibrate.
+Resident and Control pages use the selected shared township; Guard shows the combined demo help desk.
 
 **Call for help, two-way.** A resident taps *I need help*, says what for and for how many, and then watches
 the task live: sent → *Guard Rahim is on the way* → resolved. The guard desk shows the ask and how long it has
@@ -59,7 +65,7 @@ We have no access to real drain sensors, so drains are **simulated zones** of re
 
 ## Data, licences and AI use
 
-Safe Routes and `/resident` automatically derive **demo dry road points** for each shared township. A deterministic algorithm replays the baseline 210-minute storm, excludes every zone that becomes red, and chooses spaced anchors on actual mapped roads. Built-in and previously downloaded townships use the same calculation as new downloads; no AI API, hand-picked refuge list, or new shelter feed is required. Routes prefer green-only roads, fall back to amber with a warning, exclude red/unknown streets and require green destination access. A flooded origin never produces a walking line. Select **Phone/server simulation** on the dashboard to compare with residents; local replay is separate.
+Safe Routes and `/resident` automatically derive **demo dry road points** for each shared township. A deterministic algorithm replays the baseline 210-minute storm, excludes every zone that becomes red, and chooses spaced anchors on actual mapped roads. Built-in and previously downloaded townships use the same calculation as new downloads; no AI API, hand-picked refuge list, or new shelter feed is required. Routes prefer green-only roads, fall back to amber with a warning, exclude red/unknown streets and require green destination access. A flooded origin never produces a walking line. The web dashboard always uses its own local simulation for map conditions, storm controls and Safe Routes. Phone pages use the separate shared phone/server simulation; the web storm does not change their readings.
 
 The resident portal uses **Locate me** (one-shot permission, HTTPS required except localhost) or street-name/road-ID suggestions. Manual search uses an approximate street endpoint; location readings snap to the nearest road within 75 m and require confirmation. Raw GPS coordinates are not sent or stored; routing uses the confirmed street/segment anchor. Full house-address search and journey tracking are not provided. These points stayed unflooded only in the baseline simulation: they are **not verified shelters**, and pedestrian/wheelchair access is unverified. Disconnected or flooded-only components can have no reachable point.
 

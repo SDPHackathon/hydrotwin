@@ -1,5 +1,25 @@
 # Progress
 
+- [x] 22 Oct: removed the two requested explanatory lines beneath resident geolocation and street search, including Malay translations.
+
+- [x] 22 Oct: aligned Resident styling with Guard/Control: white stone-bordered cards, dark location actions, blue field focus, semantic red help actions, consistent original section icons, larger phone form inputs and bottom safe-area spacing. Checked entry, location confirmation, map/help form and English/Malay at phone width without horizontal overflow; lint, 112 tests and production build pass.
+
+- [x] 22 Oct: added required name field to resident location help, displayed on the request tracker and guard card via existing resident_name; validated on the server and retained on request updates. Demo placeholder asks for fictional names; no database schema changes. Isolated resident-to-guard creation/update checked; lint, 112 tests and production build pass.
+
+- [x] 22 Oct: removed the resident Google Maps explanatory paragraph and bottom simulation disclaimer at the user's request, including both translations and the unused description reference.
+
+- [x] 22 Oct: resident location labels hide raw OSM IDs for unnamed roads, using nearby named-road context within 150 m or a plain Unnamed road fallback; English/Malay labels keep the actual selected anchor unchanged. Browser search/confirmation and both languages checked; lint, 111 tests and production build pass.
+
+- [x] 22 Oct: trimmed resident map text to native map attribution and one concise simulation/shelter footer; removed redundant legend, extra attribution, technical timestamp and repeated disclaimer in both languages.
+
+- [x] 22 Oct: simplified flooded-origin resident map to safe-point markers only; removed reference paths, alternate starts, preview warnings and unused preview engine/tests. Normal routes from an eligible resident origin remain supported.
+
+- [x] 22 Oct: removed duplicate resident route-panel help button; assistance section retains the single help entry.
+
+- [x] 22 Oct: resident flooded-origin reference map retains every safe-point anchor and displays dashed, green-road-only previews from a separate start, with English/Malay view-only warnings. Guidance remains blocked from the resident, disconnected paths are omitted, and stale/offline conditions withdraw previews. Isolated browser check covered a flooded Jalan 1/1 and offline withdrawal; lint, 112 tests and production build pass.
+
+- [x] 22 Oct: labelled suggested-destination markers on the web Live Warning and Safe Routes map; green eligibility comes from the routing engine, unavailable points display grey, and clicking an eligible marker selects it in Safe Routes. Simplified the destination explanation. Browser selection checked; lint, all 109 tests and production build pass.
+
 **Current (21 Oct):** completed the resumed algorithmic demo dry-point and location-based resident flow. Validation and limitations are recorded below; `docs/refuge-location-handoff.md` is now a completion record.
 
 Submission: **Fri 23 Oct, 11:59 PM** — pitch deck (≤10 slides) · 5-min video · this repo (public or judge-accessible) · optional docs.
@@ -115,6 +135,11 @@ Demo instructions, fixture harness and pitch limitations: `docs/evacuation-demo.
 - [x] 20 Oct: implemented map-contained demo rain with intensity and capped playback response; shared local/phone weather labels, pause/reset/completion, six-second controller/API freshness, static reduced-motion rendering and an animation toggle. Plan upgrade replay uses local weather; development peak previews and Traffic omit the overlay. Lint and all 73 tests pass; production Webpack build passes with Node 24 and network access for existing Google fonts. Default Turbopack build stalled and was stopped, consistent with the previously documented environment issue. Browser verified visible rain, 4× local playback, pause/reset/toggle/zoom, local Plan source, no development overlay, and phone 2×/10× speed, pause/reset, completion and sync recovery; no console errors in the verification tab. Physical-device and reduced-motion browser checks remain unverified.
 
 ## UI Navigation & Polish (18–19 Oct)
+- [x] 22 Oct: web dashboard now always uses its in-browser local storm for Live Warning, map/weather, controls and Safe Routes. Removed cloud source state, phone polling/Realtime subscription and source selectors; local upgraded-drain scenarios remain supported. Phone pages retain their separate shared simulation. Lint, TypeScript, all 109 tests and production build pass; browser verified 4× local playback/pause and local Safe Routes with both source controls absent, and before/after API snapshots confirmed phone readings unchanged. Supersedes the earlier optional dashboard Cloud Phone Sync workflow.
+- [x] 22 Oct: replaced the Phone Links modal with a simple `/phone?area=…` landing page offering Resident, Storm Control and Guard. Dashboard entry points open it in a new tab; Resident/Control preserve the selected township, Guard uses the shared desk, and browser Back returns to the chooser. Removed top cross-page navigation from all three mobile pages while preserving language/status controls and existing direct links. Lint, all 109 tests and production build pass; browser verified new-tab launch, all three choices/clean headers/Back, Cyberjaya preservation and 390 px layout with no console errors.
+- [x] 21 Oct: resident route cards offer Open in Google Maps / Buka dalam Google Maps using explicit walking directions between the displayed anchors. The note explains Google's independent routing without HydroTwin flood data and click-only endpoint sharing; unavailable/withdrawn routes have no link. Added coordinate-order/validation regressions; all 109 tests, lint and production build pass. Isolated production browser verified a 676 m demo route, actual Google walking-directions launch, English/Malay labels and removal on flooded-origin withdrawal without changing the main demo server.
+- [x] 21 Oct: fixed unclear orange-pin map feedback. Loaded roads now appear in blue, with the match result/confirmation directly below the canvas and scrolled into view. Rejected pins explain outside coverage or no road within 75 m; valid pins show the matched road, distance and confirmation. Uncovered geolocation no longer opens the map automatically. Browser reproduced both an unmatched Cyberjaya lake point and a matched Lebuh Sentosa point; 107 tests, lint, TypeScript and production build pass.
+- [x] 21 Oct: location-first resident entry with cross-area street search, one-shot GPS or map selection, boundary/road confirmation and explicit overlap choices. Discovery clips complete OSM roads to the downloaded bbox; outside points cannot snap inward and missing/failed coverage stays unavailable. English/Malay copy and mobile map preview; 107 tests, lint, TypeScript, default production build and read-only coverage HTTP checks pass. Browser checked cross-area selection, Cyberjaya preview/confirmation, change-location withdrawal, outside-boundary map click, map-centre lookup and English/Malay at 390 px. Physical GPS remains unverified. Stable published monitoring coverage remains future work.
 - [x] 21 Oct: tolerate browser-extension body attributes (`cz-shortcut-listen`) during hydration, scoped to the body element so child mismatches still warn. Verified the exact attribute through a temporary production HTML proxy and interactive language switching with no hydration warning; lint, all 92 tests and production build pass.
 - [x] 18 Oct: map-centered expanding mode navigation replaces sidebar tabs; animated label entrance, hover/focus dashes and image crossfades, keyboard selection/Escape, reduced-motion support; licensed replaceable local stock images
 - [x] 19 Oct: swapped township and mode navigation positions; compact sidebar mode tabs, expanding map township picker with current location label, hover/focus previews, scrollable downloaded locations and download action; responsive list layout
@@ -128,3 +153,5 @@ Demo instructions, fixture harness and pitch limitations: `docs/evacuation-demo.
 - [ ] 20–21 Oct: rough cut of the video (laptop dashboard + phone alert, voice-over)
 - [ ] 22 Oct: full run-through · README final · AI-use log + third-party list complete · repo public
 - [ ] 23 Oct: Danish submits
+- [x] 22 Oct: renamed web map marker labels and tooltips to Safe point.
+- [x] 22 Oct: renamed the web planning heading from Add Civil Intervention to Add upgrades.

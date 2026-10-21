@@ -11,8 +11,6 @@ type Props = {
   usingDrafts: boolean;
   draftDestinations: RouteDestination[];
   onUseDrafts: (value: boolean) => void;
-  source: "local" | "cloud";
-  onSourceChange: (value: "local" | "cloud") => void;
   streets: StreetFeature[];
   startStreetId: string;
   onStartChange: (id: string) => void;
@@ -47,14 +45,11 @@ export default function EvacuationPanel(p: Props) {
   };
   return <div className="flex flex-col gap-4 text-xs">
     <section className="space-y-2 rounded-xl border border-violet-200 bg-violet-50 p-4">
-      <h2 className="font-bold">Automatically selected demo refuge points</h2>
-      <p>{p.catalogue ? `${p.catalogue.destinations.length} road points stayed unflooded during the baseline demo storm.` : p.catalogueError ?? "Assessing the demo storm…"}</p>
-      <p>Chosen by the simulator across connected parts of this township. These are road locations, not verified shelters. Current access must still be green.</p>
+      <h2 className="font-bold">Suggested safe destinations</h2>
+      <p>{p.catalogue ? `${p.catalogue.destinations.length} road locations stayed dry in the baseline simulation.` : p.catalogueError ?? "Checking the simulation…"}</p>
+      <p>These are suggestions, not confirmed shelters. Check that the route is green before travelling.</p>
       {p.catalogue?.destinations.length === 0 && <p role="status">No qualifying unflooded road point was found. No destination is invented.</p>}
-      <label className="block space-y-1"><span>Flood source</span><select className={selectClass} value={p.source} onChange={(e) => p.onSourceChange(e.target.value as "local" | "cloud")}>
-        <option value="local">Local simulation</option><option value="cloud">Phone/server simulation · matches residents</option>
-      </select></label>
-      <p>Use Phone/server simulation to match the resident portal.</p>
+      <p className="text-stone-600">Based on the storm simulated on this dashboard.</p>
     </section>
     <section className="space-y-3 rounded-xl border border-stone-200 bg-stone-50 p-4">
       <h2 className="font-semibold uppercase tracking-wider">Evacuation Route Finder</h2>

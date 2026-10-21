@@ -1,7 +1,7 @@
 "use client";
 
-// Runs the storm in this browser tab. Step B replaces this with readings from the phone
-// control page → risk-engine Edge Function → Supabase Realtime (docs/progress.md).
+// Runs the web dashboard's storm in this browser tab. Phone pages use their separate
+// shared server simulation; the web map and routes always use this local storm.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { assess } from "@/lib/engine/risk";

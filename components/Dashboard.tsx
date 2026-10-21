@@ -3,22 +3,20 @@
 import "./Dashboard.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AddTownshipModal from "@/components/AddTownshipModal";
-import MobileLinksModal from "@/components/MobileLinksModal";
 import TownshipMap from "@/components/TownshipMap";
 import MapTownshipNavigation from "@/components/MapTownshipNavigation";
 import EvacuationPanel from "@/components/EvacuationPanel";
 import { useSharedCatalogue } from "@/lib/evacuation/useSharedCatalogue";
 import { shareTownship } from "@/lib/storage/share-township";
-import { calculateEvacuation, effectiveFlood, type FloodEvidence } from "@/lib/engine/evacuation";
+import { calculateEvacuation, eligibleDestinations, type FloodEvidence } from "@/lib/engine/evacuation";
 import DevelopmentPanel from "@/components/DevelopmentPanel";
 import TrafficWorkspace from "@/components/TrafficWorkspace";
 import { developmentError, evaluateDevelopment, newDevelopment, DEVELOPMENT_LABELS, type DevelopmentStage } from "@/lib/engine/development";
 import type { Area, Streets } from "@/lib/area";
 import { STATUS_COLOR } from "@/lib/colors";
 import { applyInterventions, recommendInterventions, replayStorm } from "@/lib/engine/plan";
-import { findSafeRoute, type RoadPoint, type RoadPosition, type RouteDestination, type RouteResult } from "@/lib/engine/route";
+import { anchor, findSafeRoute, type RoadPoint, type RoadPosition, type RouteDestination, type RouteResult } from "@/lib/engine/route";
 import type { Drain, DrainStatus, InterventionKind, PlanIntervention, Status } from "@/lib/engine/types";
-import { supabase } from "@/lib/supabase";
 import {
   getLocalTownship,
   listLocalTownships,
@@ -26,7 +24,7 @@ import {
   type LocalTownshipMeta,
 } from "@/lib/storage/township-db";
 import { useLocalStorm } from "@/lib/useLocalStorm";
-import { isStormPlayback, phoneSyncState, PHONE_SYNC_TIMEOUT_MS, presentStorm, REPLAY_END_MINUTE, type PhoneSync, type StormPlayback } from "@/lib/storm-presentation";
+import { presentStorm, REPLAY_END_MINUTE } from "@/lib/storm-presentation";
 import { WATER_HEIGHT_SCALE } from "@/lib/water";
 
 const SEVERITY: Record<Status, number> = { red: 0, amber: 1, green: 2 };
@@ -76,7 +74,7 @@ function DashboardView({
   onSelectArea,
   onOpenModal,
 }: DashboardViewProps) {
-  // Mode: "live" (Realtime / local simulation), "plan" (Plan mode civil fixes), or "route" (Evacuation Safe Routes)
+  // Mode: "live" (local simulation), "plan" (Plan mode civil fixes), or "route" (Evacuation Safe Routes)
   const [mode, setMode] = useState<"live" | "plan" | "route">("live");
   const [domain, setDomain] = useState<'flood'|'traffic'>('flood');
   const [modePhase, setModePhase] = useState<"idle" | "leaving" | "entering">("idle");
@@ -101,12 +99,6 @@ function DashboardView({
     }, 180));
   };
 
-  // Live data source: "local" (in-browser simulation) or "cloud" (Supabase / Phone /control sync)
-  const [liveSource, setLiveSource] = useState<"local" | "cloud">("local");
-  const [cloudStatuses, setCloudStatuses] = useState<Record<string, DrainStatus>>({});
-  const [cloudStormState, setCloudStormState] = useState<StormPlayback | null>(null);
-  const [phoneSync, setPhoneSync] = useState<PhoneSync>("waiting");
-  const [cloudEvidence, setCloudEvidence] = useState<FloodEvidence | null>(null);
   const [clockNow, setClockNow] = useState(0);
   useEffect(() => {
     const timer = setInterval(() => setClockNow(Date.now()), 250);
@@ -114,9 +106,6 @@ function DashboardView({
   }, []);
   const shared = useSharedCatalogue(currentArea.slug, currentStreets.features, currentDrains);
   const [usingDrafts, setUsingDrafts] = useState(false);
-
-  // Mobile companion launcher modal
-  const [mobileModalOpen, setMobileModalOpen] = useState(false);
 
   // Safe Routes (ROUTE-1) state
   const [startStreetId, setStartStreetId] = useState(currentStreets.features[0]?.properties.id ?? "");
@@ -132,7 +121,8 @@ function DashboardView({
         typeof d?.id === "string" && typeof d?.name === "string" && typeof d?.street_id === "string" && d?.kind === "demo") : [];
     } catch { return []; }
   });
-  const destinations = usingDrafts ? draftDestinations : shared.catalogue?.destinations ?? [];
+  const destinations = useMemo(() => usingDrafts ? draftDestinations : shared.catalogue?.destinations ?? [],
+    [usingDrafts, draftDestinations, shared.catalogue]);
   const [destinationSaveError, setDestinationSaveError] = useState(false);
   const updateDestinations = (next: RouteDestination[]) => {
     setDraftDestinations(next);
@@ -225,93 +215,36 @@ function DashboardView({
       ? upgradedDrains
       : currentDrains;
   const storm = useLocalStorm(activeSimulationDrains);
-  const displayedStorm = presentStorm({ local: storm, phone: cloudStormState,
-    usePhone: mode !== "plan" && liveSource === "cloud", phoneSupported: true, sync: phoneSync });
-
-  // Supabase Realtime & Periodic Poll when liveSource is "cloud"
-  useEffect(() => {
-    if (liveSource !== "cloud") return;
-
-    let mounted = true;
-    let lastSuccess = Date.now();
-    let fetching = false;
-    const controller = new AbortController();
-    const fetchCloud = async () => {
-      if (fetching) return;
-      fetching = true;
-      const requestStarted = Date.now();
-      try {
-        const res = await fetch(`/api/risk-engine?area=${encodeURIComponent(currentArea.slug)}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(5000)]) });
-        if (res.ok && mounted) {
-          const data = await res.json();
-          const playback: unknown = data;
-          if (!mounted || !isStormPlayback(playback)) return;
-          if (data.statuses) setCloudStatuses(data.statuses);
-          if (data.floodEvidence && Number.isFinite(data.serverNow)) {
-            const evidence: FloodEvidence = data.floodEvidence;
-            // Translate server evidence ages to this device clock, conservatively including request latency.
-            const offset = requestStarted - data.serverNow;
-            setCloudEvidence({ ...evidence, controller_at: evidence.controller_at === null ? null : evidence.controller_at + offset,
-              observed_at: Object.fromEntries(Object.entries(evidence.observed_at).map(([id, at]) => [id, at + offset])) });
-          }
-          setCloudStormState({ minute: playback.minute, running: playback.running, speed: playback.speed });
-          lastSuccess = Date.now();
-          setPhoneSync(phoneSyncState(playback, data.stormAgeMs));
-        }
-      } catch {
-        if (mounted) { setPhoneSync("lost"); setCloudEvidence(null); }
-      } finally {
-        fetching = false;
-      }
-    };
-    fetchCloud();
-    const interval = setInterval(fetchCloud, 1500);
-    const freshness = setInterval(() => {
-      if (Date.now() - lastSuccess >= PHONE_SYNC_TIMEOUT_MS) setPhoneSync("lost");
-    }, 1000);
-
-    const channel = supabase
-      .channel("public:drain_status")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "drain_status" },
-        () => { if (mounted) void fetchCloud(); },
-      )
-      .subscribe();
-
-    return () => {
-      mounted = false;
-      controller.abort();
-      clearInterval(interval);
-      clearInterval(freshness);
-      supabase.removeChannel(channel);
-    };
-  }, [liveSource, currentArea.slug]);
-
-  const currentCloudStatuses = useMemo(() => cloudEvidence && phoneSync !== "lost" ? effectiveFlood(cloudStatuses, cloudEvidence, clockNow).statuses : {},
-    [cloudEvidence, cloudStatuses, clockNow, phoneSync]);
-
-  // Active statuses: in Cloud mode use cloudStatuses, else local simulation
-  const activeStatuses = useMemo(() => {
-    if (mode !== "plan" && liveSource === "cloud") {
-      return currentCloudStatuses;
-    }
-    return storm.statuses;
-  }, [mode, liveSource, currentCloudStatuses, storm.statuses]);
+  const displayedStorm = presentStorm({ local: storm, phone: null,
+    usePhone: false, phoneSupported: false, sync: "waiting" });
+  const activeStatuses = storm.statuses;
+  const mapDestinations = useMemo(() => {
+    const colors = Object.fromEntries(Object.entries(activeStatuses).map(([id, st]) => [id, st.status]));
+    const eligible = new Set(shared.catalogue
+      ? eligibleDestinations(shared.catalogue, colors, currentStreets.features, clockNow).map(d => d.id) : []);
+    return destinations.flatMap(d => {
+      const point = anchor(currentStreets.features.find(s => s.properties.id === d.street_id), d.position);
+      const available = usingDrafts
+        ? findSafeRoute(currentStreets.features, d.street_id, [d], colors, d.id, d.position).found
+        : eligible.has(d.id);
+      return point ? [{ id: d.id, name: d.name, point, available,
+        selected: d.id === destinationId }] : [];
+    });
+  }, [activeStatuses, shared.catalogue, currentStreets, clockNow, destinations, usingDrafts, destinationId]);
 
   // Safe Routes (ROUTE-1) Calculation
   const safeRouteResult: RouteResult | null = useMemo(() => {
     if (mode !== "route") return null;
 
-    const evidence: FloodEvidence = liveSource === "cloud" ? cloudEvidence ?? { source: "phone_demo", revision: "waiting", observed_at: {}, controller_at: null, running: false, minute: 0 } :
+    const evidence: FloodEvidence =
       { source: "local_demo", revision: `local:${storm.minute}`, observed_at: Object.fromEntries(Object.keys(activeStatuses).map((id) => [id, clockNow])), controller_at: clockNow, running: storm.running, minute: storm.minute };
     const envelope = calculateEvacuation({ streets: currentStreets.features, origin: startStreetId, position: originPosition,
-      catalogue: shared.catalogue, statuses: liveSource === "cloud" ? currentCloudStatuses : activeStatuses, evidence, now: clockNow, selectedId: destinationId });
+      catalogue: shared.catalogue, statuses: activeStatuses, evidence, now: clockNow, selectedId: destinationId });
     if (!usingDrafts) return envelope.route;
     if (!["current", "frozen"].includes(envelope.conditions)) return { ...envelope.route, outcome: "conditions_unavailable" };
     return findSafeRoute(currentStreets.features, startStreetId, draftDestinations,
-      Object.fromEntries(Object.entries(liveSource === "cloud" ? currentCloudStatuses : activeStatuses).map(([id, st]) => [id, st.status])), destinationId, originPosition);
-  }, [mode, startStreetId, destinationId, originPosition, currentStreets, activeStatuses, liveSource, cloudEvidence, clockNow, storm.minute, storm.running, shared.catalogue, usingDrafts, draftDestinations, currentCloudStatuses]);
+      Object.fromEntries(Object.entries(activeStatuses).map(([id, st]) => [id, st.status])), destinationId, originPosition);
+  }, [mode, startStreetId, destinationId, originPosition, currentStreets, activeStatuses, clockNow, storm.minute, storm.running, shared.catalogue, usingDrafts, draftDestinations]);
 
   const streetCounts = useMemo(() => {
     const counts: Record<Status, number> = { green: 0, amber: 0, red: 0 };
@@ -423,6 +356,8 @@ function DashboardView({
         safeRoute={mode === "route" ? safeRouteResult?.coordinates : null}
         routeOrigin={mode === "route" ? safeRouteResult?.origin : null}
         routeDestination={mode === "route" ? safeRouteResult?.destination : null}
+        suggestedDestinations={mode === "live" || mode === "route" ? mapDestinations : undefined}
+        onDestinationClick={(id) => { setDestinationId(id); setRoutePickMode(null); changeMode("route"); }}
         onRoutePick={mode === "route" && routePickMode ? pickRoutePoint : undefined}
         onDrainClick={(drainId) => {
           if (developmentActive) { setDevelopment(prev => ({ ...prev, drain_id: drainId })); return; }
@@ -443,13 +378,14 @@ function DashboardView({
 
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">Workspace</span>
-            <button
-              type="button"
-              onClick={() => setMobileModalOpen(true)}
+            <a
+              href={`/phone?area=${encodeURIComponent(currentArea.slug)}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 shadow-2xs transition hover:border-stone-400 hover:bg-stone-50"
             >
               Phone Links
-            </button>
+            </a>
           </div>
           <div className="grid grid-cols-2 gap-1 rounded-lg bg-stone-100 p-1 text-xs" aria-label="Analysis domain"><button aria-pressed="true" className="rounded-md bg-white px-3 py-2 font-semibold text-emerald-700 shadow-sm">Flood</button><button className="rounded-md px-3 py-2 text-stone-600 hover:bg-white" onClick={()=>{storm.pause();setDomain('traffic');}}>Traffic</button></div>
           <nav className="dashboard-mode-tabs" aria-label="Dashboard modes">
@@ -657,7 +593,7 @@ function DashboardView({
 
             {/* Add New Fix Tool */}
             <section className="rounded-xl border border-stone-200 p-4 bg-white flex flex-col gap-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-700">Add Civil Intervention</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-stone-700">Add upgrades</h3>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -773,8 +709,6 @@ function DashboardView({
             usingDrafts={usingDrafts}
             draftDestinations={draftDestinations}
             onUseDrafts={(value) => { setUsingDrafts(value); setDestinationId(null); setRoutePickMode(null); }}
-            source={liveSource}
-            onSourceChange={(value) => { if (value === "cloud") { storm.pause(); setCloudEvidence(null); setPhoneSync("waiting"); } setLiveSource(value); }}
             streets={currentStreets.features}
             startStreetId={startStreetId}
             onStartChange={(id) => { setStartStreetId(id); setOriginPosition(undefined); setRoutePickMessage(""); }}
@@ -791,36 +725,9 @@ function DashboardView({
         ) : (
           /* ================= LIVE MODE VIEW ================= */
           <>
-            {/* Live Data Source Selector */}
-            <div className="rounded-xl border border-stone-200 p-2.5 bg-stone-50 flex items-center justify-between text-xs">
-              <span className="font-semibold text-stone-700">Data Source:</span>
-              <div className="flex rounded-md bg-stone-200 p-0.5 font-medium">
-                <button
-                  type="button"
-                  onClick={() => setLiveSource("local")}
-                  className={`px-2.5 py-1 rounded transition ${
-                    liveSource === "local" ? "bg-white text-stone-900 shadow-xs" : "text-stone-600 hover:text-stone-900"
-                  }`}
-                >
-                  Local Sim
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (liveSource === "cloud") return;
-                    storm.pause();
-                    setCloudStormState(null);
-                    setPhoneSync("waiting");
-                    setLiveSource("cloud");
-                  }}
-                  className={`px-2.5 py-1 rounded transition flex items-center gap-1.5 ${
-                    liveSource === "cloud" ? "bg-white text-stone-900 shadow-xs font-semibold" : "text-stone-600 hover:text-stone-900"
-                  }`}
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Cloud Phone Sync
-                </button>
-              </div>
+            <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 p-2.5 text-xs">
+              <span className="font-semibold text-stone-700">Data source</span>
+              <span className="font-medium text-stone-700">Local simulation</span>
             </div>
 
             {/* Simulation Infrastructure Scenario Toggle */}
@@ -867,19 +774,6 @@ function DashboardView({
               </div>
             </div>
 
-            {liveSource === "cloud" && (
-              <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 text-xs text-emerald-800 flex items-center justify-between">
-                <span>{displayedStorm.rainMmPerHour === null ? displayedStorm.label : "Synced to phone storm controller"}</span>
-                <button
-                  type="button"
-                  onClick={() => setMobileModalOpen(true)}
-                  className="underline font-semibold"
-                >
-                  Open /control
-                </button>
-              </div>
-            )}
-
             <section className="rounded-xl border border-stone-200 p-4">
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-stone-500">Storm time</span>
@@ -896,12 +790,12 @@ function DashboardView({
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={storm.running ? storm.pause : storm.start}
-                  disabled={storm.finished || liveSource === "cloud"}
+                  disabled={storm.finished}
                   className="flex-1 rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
                 >
-                  {liveSource === "cloud" ? displayedStorm.label : storm.running ? "Pause" : storm.finished ? "Complete" : storm.minute === 0 ? "Start storm" : "Resume"}
+                  {storm.running ? "Pause" : storm.finished ? "Complete" : storm.minute === 0 ? "Start storm" : "Resume"}
                 </button>
-                <button onClick={storm.reset} disabled={liveSource === "cloud"} className="rounded-lg border border-stone-300 px-3 py-2 text-sm disabled:opacity-40">
+                <button onClick={storm.reset} className="rounded-lg border border-stone-300 px-3 py-2 text-sm disabled:opacity-40">
                   Reset
                 </button>
                 <div className="flex overflow-hidden rounded-lg border border-stone-300 text-sm">
@@ -909,7 +803,6 @@ function DashboardView({
                     <button
                       key={x}
                       onClick={() => storm.setSpeed(x)}
-                      disabled={liveSource === "cloud"}
                       className={`px-2.5 ${displayedStorm.rainMmPerHour !== null && displayedStorm.speed === x ? "bg-stone-900 text-white" : ""}`}
                     >
                       {x}×
@@ -932,8 +825,6 @@ function DashboardView({
 
             <section>
               <h2 className="mb-2 text-sm font-medium text-stone-500">Drains</h2>
-              {liveSource === "cloud" && currentStreets.features.length > Object.values(streetCounts).reduce((sum, count) => sum + count, 0) &&
-                <p role="status" className="mb-3 rounded-lg bg-stone-100 p-2 text-xs text-stone-700">Some road conditions are unknown or stale. No local simulation is substituted.</p>}
               <ul className="flex flex-col gap-2">
                 {ranked.map(({ drain, s }) => {
                   const activeInv =
@@ -988,11 +879,6 @@ function DashboardView({
         </footer>
       </aside>
 
-      <MobileLinksModal
-        isOpen={mobileModalOpen}
-        onClose={() => setMobileModalOpen(false)}
-        areaSlug={currentArea.slug}
-      />
     </div>
   );
 }

@@ -19,6 +19,7 @@ import StormRainOverlay from "@/components/StormRainOverlay";
 import type { StormPresentation } from "@/lib/storm-presentation";
 
 const BASE_STYLE = "https://tiles.openfreemap.org/styles/positron";
+type MapDestination = { id: string; name: string; point: [number, number]; available: boolean; selected: boolean };
 
 type Props = {
   storm?: StormPresentation;
@@ -32,6 +33,8 @@ type Props = {
   safeRoute?: [number, number][] | null;
   routeOrigin?: [number, number] | null;
   routeDestination?: [number, number] | null;
+  suggestedDestinations?: MapDestination[];
+  onDestinationClick?: (id: string) => void;
   onDrainClick?: (drainId: string) => void;
   onRoutePick?: (point: RoadPoint | null) => void;
   siteBoundary?: SitePoint[];
@@ -83,6 +86,8 @@ export default function TownshipMap({
   safeRoute = null,
   routeOrigin = null,
   routeDestination = null,
+  suggestedDestinations,
+  onDestinationClick,
   onDrainClick,
   onRoutePick,
   siteBoundary,
@@ -100,6 +105,10 @@ export default function TownshipMap({
   const map = useRef<MapLibreMap | null>(null);
   const lastRoute = useRef("");
   const onDrainClickRef = useRef(onDrainClick);
+  const onDestinationClickRef = useRef(onDestinationClick);
+  useEffect(() => { onDestinationClickRef.current = onDestinationClick; }, [onDestinationClick]);
+  // Compare marker content so ordinary clock ticks do not rebuild DOM markers.
+  const destinationKey = JSON.stringify(suggestedDestinations ?? []);
   const onRoutePickRef = useRef(onRoutePick);
   const onSitePickRef = useRef(onSitePick);
   useEffect(() => {
@@ -462,6 +471,35 @@ export default function TownshipMap({
       source.setData(makeInterventionsGeoJson(drains, interventions));
     }
   }, [drains, interventions, ready]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m) return;
+    let cancelled = false;
+    const markers: import("maplibre-gl").Marker[] = [];
+    void import("maplibre-gl").then(({ Marker }) => {
+      if (cancelled) return;
+      for (const d of JSON.parse(destinationKey) as MapDestination[]) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "flex items-center gap-1 rounded-full border-2 bg-white px-2 py-1 text-xs font-bold shadow-md";
+        button.style.borderColor = d.selected ? SAFE_ROUTE_COLOR : d.available ? "#15803d" : "#78716c";
+        button.style.color = d.available ? "#166534" : "#57534e";
+        button.style.cursor = d.available ? "pointer" : "default";
+        button.textContent = `${d.available ? "⚑" : "⊘"} ${d.available ? "Safe point" : "Unavailable"}`;
+        button.title = `${d.name} — ${d.available ? "Safe point · simulation only. Click to select." : "Currently unavailable in the simulation."}`;
+        button.setAttribute("aria-label", button.title);
+        button.setAttribute("aria-pressed", String(d.selected));
+        button.setAttribute("aria-disabled", String(!d.available));
+        button.addEventListener("click", (event) => {
+          event.stopPropagation();
+          if (d.available) onDestinationClickRef.current?.(d.id);
+        });
+        markers.push(new Marker({ element: button, anchor: "bottom" }).setLngLat(d.point).addTo(m));
+      }
+    });
+    return () => { cancelled = true; markers.forEach(marker => marker.remove()); };
+  }, [ready, destinationKey]);
 
   // Update safe evacuation route GeoJSON
   useEffect(() => {

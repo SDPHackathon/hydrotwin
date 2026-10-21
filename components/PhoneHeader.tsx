@@ -1,11 +1,8 @@
-import Link from "next/link";
-
 type Props = {
   title: string;
   badge: string;
   badgeClassName: string;
   subtitle: string;
-  links: { href: string; label: string }[];
   language?: "en" | "bm";
   onToggleLanguage?: () => void;
 };
@@ -15,7 +12,6 @@ export default function PhoneHeader({
   badge,
   badgeClassName,
   subtitle,
-  links,
   language = "en",
   onToggleLanguage,
 }: Props) {
@@ -38,18 +34,6 @@ export default function PhoneHeader({
           <p className="text-[11px] text-stone-500 truncate">{subtitle}</p>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <nav className="flex items-center gap-1.5 shrink-0 text-[11px] [@media(display-mode:standalone)]:hidden">
-              {links.map((l) => (
-                <Link
-                  key={l.href}
-                  href={l.href}
-                  className="px-2 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium whitespace-nowrap"
-                >
-                  {l.label}
-                </Link>
-              ))}
-            </nav>
-
             {onToggleLanguage && (
               <div className="flex items-center gap-1.5 shrink-0">
                 <span

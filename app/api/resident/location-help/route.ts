@@ -6,13 +6,13 @@ import type { RoadPoint } from "@/lib/engine/route";
 const headers = { "Cache-Control": "no-store" };
 export async function POST(request: NextRequest) {
   try {
-    const body = await boundedJson(request, 4096) as { action: string; token?: string; area_slug: string; origin: RoadPoint };
+    const body = await boundedJson(request, 4096) as { action: string; token?: string; area_slug: string; origin: RoadPoint; name?: unknown };
     if (body.token !== undefined && (typeof body.token !== "string" || !/^[0-9a-f-]{36}$/.test(body.token))) throw new Error("Invalid help session");
     if (body.action === "read") return NextResponse.json({ task: body.token ? readLocationHelp(body.token) : null }, { headers });
     if (body.action === "request") {
       const help = parseHelpRequest(body);
       if (!help.ok) throw new Error(help.error);
-      const result = await requestLocationHelp(body.area_slug, body.origin, help.request, body.token);
+      const result = await requestLocationHelp(body.area_slug, body.origin, help.request, body.name, body.token);
       return NextResponse.json(result, { headers });
     }
     if ((body.action === "safe" || body.action === "cancel") && body.token) {
