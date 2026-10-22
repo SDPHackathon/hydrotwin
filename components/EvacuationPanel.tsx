@@ -129,6 +129,5 @@ export default function EvacuationPanel(p: Props) {
       <p>{p.saveError ? "Device storage is unavailable; these points last for this session only." : "Saved on this device for this township."}</p>
       </>}
     </details>
-    <p className="text-[11px] text-stone-500">Demo only. Simulated drain zones and per-street depth, not hydraulics. Green-first walking routes describe the supplied snapshot, not future conditions or accessibility.</p>
   </div>;
 }

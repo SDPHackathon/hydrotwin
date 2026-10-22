@@ -527,7 +527,21 @@ export default function GuardPage() {
                   onClick={startShift}
                   className="min-h-11 px-3.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold shadow-xs flex items-center gap-1.5"
                 >
-                  <span>🔔</span>
+                  <svg
+                    aria-hidden="true"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="shrink-0"
+                  >
+                    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                  </svg>
                   <span>
                     {language === "en" ? "Start shift" : "Mula syif"}
                   </span>
@@ -611,7 +625,19 @@ export default function GuardPage() {
                 aria-label="Close route"
                 className="h-10 w-10 -mr-1.5 -mt-1.5 shrink-0 rounded-lg text-stone-500 hover:bg-stone-100 flex items-center justify-center font-bold"
               >
-                ✕
+                <svg
+                  aria-hidden="true"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
               </button>
             </div>
             <div className="mt-2">
@@ -664,12 +690,42 @@ export default function GuardPage() {
 
         {notice && (
           <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs font-medium flex items-center justify-between gap-2">
-            <span>{notice}</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <svg
+                aria-hidden="true"
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="shrink-0 text-amber-700"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span className="truncate">{notice}</span>
+            </div>
             <button
               onClick={() => setNotice(null)}
               className="text-stone-500 hover:text-stone-800 text-sm font-bold px-1"
             >
-              ✕
+              <svg
+                aria-hidden="true"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
             </button>
           </div>
         )}
@@ -686,7 +742,21 @@ export default function GuardPage() {
 
           {!loading && visible.length === 0 && (
             <div className="bg-white rounded-xl border border-stone-200 p-8 text-center text-xs text-stone-500 shadow-xs">
-              <span className="text-2xl block mb-2">🛡️</span>
+              <div className="flex justify-center mb-2.5 text-stone-400">
+                <svg
+                  aria-hidden="true"
+                  width="36"
+                  height="36"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.75"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3ZM8 12l3 3 5-6" />
+                </svg>
+              </div>
               {filter === "sos"
                 ? language === "en"
                   ? "No SOS calls open."
@@ -734,8 +804,24 @@ export default function GuardPage() {
                         {t.resident_name}
                       </span>
                       {isSos && (
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-600 text-white uppercase tracking-wide animate-pulse">
-                          🆘 SOS
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-600 text-white uppercase tracking-wide animate-pulse">
+                          <svg
+                            aria-hidden="true"
+                            width="10"
+                            height="10"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="shrink-0"
+                          >
+                            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                            <path d="M12 9v4" />
+                            <path d="M12 17h.01" />
+                          </svg>
+                          <span>SOS</span>
                         </span>
                       )}
                       <span
@@ -826,8 +912,8 @@ export default function GuardPage() {
                             : `Pengawal ${t.responder_name ?? ""} dalam perjalanan · ${now ? elapsed(t.accepted_at ?? t.created_at, now) : "0:00"}`
                           : t.check_in_state === "safe"
                             ? language === "en"
-                              ? "✅ Resident reported safe"
-                              : "✅ Penduduk melaporkan diri selamat"
+                              ? "Resident reported safe"
+                              : "Penduduk melaporkan diri selamat"
                             : language === "en"
                               ? `Waiting · ${now ? elapsed(t.created_at, now) : "0:00"} · since ${timeOf(t.created_at)}`
                               : `Menunggu · ${now ? elapsed(t.created_at, now) : "0:00"} · sejak ${timeOf(t.created_at)}`}
@@ -865,7 +951,23 @@ export default function GuardPage() {
                           disabled={busyTaskId !== null}
                           className="min-h-10 px-3 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold shadow-xs disabled:opacity-60"
                         >
-                          {language === "en" ? "Resolved ✓" : "Selesai ✓"}
+                          <span className="inline-flex items-center gap-1">
+                            <span>{language === "en" ? "Resolved" : "Selesai"}</span>
+                            <svg
+                              aria-hidden="true"
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="shrink-0"
+                            >
+                              <path d="M20 6 9 17l-5-5" />
+                            </svg>
+                          </span>
                         </button>
                       )}
                     </div>
@@ -956,7 +1058,23 @@ export default function GuardPage() {
                 disabled={busyTaskId !== null}
                 className="flex-1 min-h-11 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs disabled:opacity-60"
               >
-                {translate(language, "confirmResolveBtn")}
+                <span className="inline-flex items-center justify-center gap-1.5">
+                  <svg
+                    aria-hidden="true"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="shrink-0"
+                  >
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                  <span>{translate(language, "confirmResolveBtn")}</span>
+                </span>
               </button>
             </div>
           </div>

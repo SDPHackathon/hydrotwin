@@ -1,8 +1,24 @@
-.dashboard-mode-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border: 1px solid #e7e5e4; border-radius: 12px; background: #f5f5f4; }
-.dashboard-mode-tabs button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px; min-height: 67px; padding: 9px 3px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #78716c; font-size: 11px; font-weight: 600; transition: color 180ms, background 180ms, box-shadow 180ms; }
-.dashboard-mode-tabs button:hover { color: #292524; background: #fafaf9; }
-.dashboard-mode-tabs button[aria-pressed="true"] { background: #fff; border-color: #d1fae5; color: #047857; box-shadow: 0 2px 5px rgb(28 25 23 / 7%); }
-.dashboard-mode-tabs button:focus-visible { outline: 2px solid #10b981; outline-offset: 1px; }
+.dashboard-street-status {
+  position: absolute;
+  z-index: 10;
+  top: 86px;
+  left: 12px;
+  right: 12px;
+  pointer-events: none;
+}
+
+@media (min-width: 1024px) {
+  .dashboard-street-status {
+    top: 96px;
+    left: auto;
+    right: 18px;
+    width: 160px;
+  }
+
+  .dashboard-plan-impact {
+    width: 190px;
+  }
+}
 
 .dashboard-mode-surface {
   filter: blur(0);

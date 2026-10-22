@@ -30,6 +30,7 @@ type Props = {
   buildings?: GeoJSON.FeatureCollection;
   floodZones?: GeoJSON.FeatureCollection;
   interventions?: PlanIntervention[];
+  withUpgrades?: boolean;
   safeRoute?: [number, number][] | null;
   routeOrigin?: [number, number] | null;
   routeDestination?: [number, number] | null;
@@ -75,6 +76,15 @@ function drainPoints(drains: Drain[]): GeoJSON.Feature[] {
   }));
 }
 
+interface HoveredUpgradeInfo {
+  drainId: string;
+  areaSlug: string;
+  x: number;
+  y: number;
+  above: boolean;
+  width: number;
+}
+
 export default function TownshipMap({
   area,
   drains,
@@ -83,6 +93,7 @@ export default function TownshipMap({
   buildings,
   floodZones,
   interventions = [],
+  withUpgrades = false,
   safeRoute = null,
   routeOrigin = null,
   routeDestination = null,
@@ -133,6 +144,9 @@ export default function TownshipMap({
   useEffect(() => {
     drainsRef.current = drains;
   }, [drains]);
+  const [hoveredUpgrade, setHoveredUpgrade] = useState<HoveredUpgradeInfo | null>(null);
+  const interventionKey = JSON.stringify(interventions);
+
 
   useEffect(() => {
     let cancelled = false;
@@ -372,6 +386,16 @@ export default function TownshipMap({
           m.getCanvas().style.cursor = onRoutePickRef.current || onSitePickRef.current ? "crosshair" : "";
         });
 
+        for (const layerId of ["interventions-culverts", "interventions-ponds", "interventions-green"]) {
+          m.on("click", layerId, (e) => {
+            if (onRoutePickRef.current || onSitePickRef.current) return;
+            const id = e.features?.[0]?.properties?.drain_id;
+            if (id && onDrainClickRef.current) {
+              onDrainClickRef.current(id);
+            }
+          });
+        }
+
         m.on("click", (e) => {
           if (onSitePickRef.current) { onSitePickRef.current([e.lngLat.lng, e.lngLat.lat]); return; }
           if (!onRoutePickRef.current) return;
@@ -420,6 +444,47 @@ export default function TownshipMap({
       map.current = null;
     };
   }, [area, streets, buildings, floodZones]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!ready || !m || !withUpgrades) return;
+    const activeInterventions = JSON.parse(interventionKey) as PlanIntervention[];
+    const layers = ["drain-ring", "drain-fill", "drain-labels", "interventions-culverts", "interventions-ponds", "interventions-green"];
+    const clearHover = () => {
+      setHoveredUpgrade(previous => previous === null ? previous : null);
+      m.getCanvas().style.cursor = onRoutePickRef.current || onSitePickRef.current ? "crosshair" : "";
+    };
+    const onHover = (event: import("maplibre-gl").MapMouseEvent) => {
+      if (m.isMoving() || onRoutePickRef.current || onSitePickRef.current) { clearHover(); return; }
+      // Query the entire target once: crossing a fill/ring/label must not trigger competing leave timers.
+      const feature = m.queryRenderedFeatures(event.point, { layers })[0];
+      // Intervention feature IDs identify shapes (e.g. pond-D07), not their owning drain.
+      const drainId = feature?.properties?.drain_id ?? feature?.properties?.id;
+      const drain = drains.find(item => item.id === drainId);
+      if (!drain || !activeInterventions.some(item => item.drain_id === drainId)) { clearHover(); return; }
+      const point = m.project([drain.lng, drain.lat]);
+      const width = Math.min(224, m.getCanvas().clientWidth - 24);
+      const x = Math.max(12, Math.min(point.x - width / 2, m.getCanvas().clientWidth - width - 12));
+      // Leave room for the township picker and map controls along the top edge.
+      const above = point.y >= 210;
+      const y = point.y + (above ? -26 : 30);
+      m.getCanvas().style.cursor = "pointer";
+      // The card is anchored to the drain, so pointer motion within one target needs no render.
+      setHoveredUpgrade(previous => previous && previous.drainId === drainId && previous.x === x && previous.y === y
+        ? previous : { drainId, areaSlug: area.slug, x, y, above, width });
+    };
+    m.on("mousemove", onHover);
+    m.on("mouseout", clearHover);
+    m.on("movestart", clearHover);
+    m.on("resize", clearHover);
+    return () => {
+      m.off("mousemove", onHover);
+      m.off("mouseout", clearHover);
+      m.off("movestart", clearHover);
+      m.off("resize", clearHover);
+      clearHover();
+    };
+  }, [ready, withUpgrades, interventionKey, drains, area.slug]);
 
   useEffect(() => {
     const m = map.current;
@@ -583,5 +648,46 @@ export default function TownshipMap({
     m.on('click','traffic-roads',click);
     return ()=>{m.off('click','traffic-roads',click);};
   },[ready,trafficData,onTrafficPick]);
-  return <div className="relative h-full min-h-0 w-full"><div ref={container} className="h-full w-full" />{storm && <StormRainOverlay key={`${area.slug}-${storm.source}`} storm={storm} />}{ready && flowMap && siteClosed && siteBoundary && siteBoundary.length >= 3 && flowDrain && <DevelopmentFlowOverlay map={flowMap} boundary={siteBoundary} drain={flowDrain} />}{siteCaption && <div className="pointer-events-none absolute bottom-16 left-3 right-3 max-w-lg rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs text-stone-800 shadow-sm"><strong>Development scenario</strong><br />{siteCaption}<br /><span className="text-stone-500">Indigo: proposed site · dark line with white outline: selected access road. Zone street depths only.</span></div>}</div>;
+  const hoveredIntervention = withUpgrades && !onRoutePick && !onSitePick && hoveredUpgrade?.areaSlug === area.slug
+    ? interventions.find(item => item.drain_id === hoveredUpgrade.drainId) : undefined;
+  return (
+    <div className="relative h-full min-h-0 w-full">
+      <div ref={container} className="h-full w-full" />
+      {storm && <StormRainOverlay key={`${area.slug}-${storm.source}`} storm={storm} />}
+      {ready && flowMap && siteClosed && siteBoundary && siteBoundary.length >= 3 && flowDrain && (
+        <DevelopmentFlowOverlay map={flowMap} boundary={siteBoundary} drain={flowDrain} />
+      )}
+      {siteCaption && (
+        <div className="pointer-events-none absolute bottom-16 left-3 right-3 max-w-lg rounded-lg border border-indigo-200 bg-white/95 px-3 py-2 text-xs text-stone-800 shadow-sm">
+          <strong>Development scenario</strong>
+          <br />
+          {siteCaption}
+          <br />
+          <span className="text-stone-500">Indigo: proposed site · dark line with white outline: selected access road. Zone street depths only.</span>
+        </div>
+      )}
+
+      {hoveredIntervention && hoveredUpgrade && (
+        <div
+          role="tooltip"
+          className="pointer-events-none absolute z-20 select-none rounded-xl border border-stone-200 bg-white p-3 text-xs text-stone-700 shadow-md"
+          style={{ left: hoveredUpgrade.x, top: hoveredUpgrade.y, width: hoveredUpgrade.width, transform: hoveredUpgrade.above ? "translateY(-100%)" : undefined }}
+        >
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="font-semibold text-stone-900">Drain {hoveredUpgrade.drainId}</span>
+            <span className="rounded-md bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">With upgrades</span>
+          </div>
+          <p className="text-sm font-semibold text-stone-900">
+            {hoveredIntervention.kind === "bigger_drain" ? "Bigger culvert drain"
+              : hoveredIntervention.kind === "retention_pond" ? "Retention pond" : "Green sponge park"}
+          </p>
+          <p className="mt-1 text-[11px] text-stone-500">
+            {hoveredIntervention.kind === "bigger_drain" ? "Outflow ×1.5"
+              : hoveredIntervention.kind === "retention_pond" ? "Catchment ×0.6" : "Catchment ×0.8"}
+            {" · Demo assumption"}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }

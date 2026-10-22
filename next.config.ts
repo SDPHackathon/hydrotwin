@@ -7,6 +7,15 @@ const nextConfig: NextConfig = {
     return config;
   },
   /* config options here */
+  async redirects() {
+    return [
+      {
+        source: "/guards",
+        destination: "/guard",
+        permanent: false,
+      },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {

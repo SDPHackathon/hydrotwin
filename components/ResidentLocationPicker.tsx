@@ -105,9 +105,11 @@ export default function ResidentLocationPicker({ areas, onConfirm, onEdit, curre
         </button></li>)}
       </ul>}
       {pending && <div className="space-y-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs">
-        <p className="font-bold">{bm ? "Titik permulaan ditemui" : "Starting point found"}</p><p className="font-bold">{coverageLabel(pending, language)}</p><p>{bm ? "Liputan demo" : "Demo coverage"}: {pending.area.name} · {pending.area.slug}</p>
-        <p>{bm ? "Semak titik hitam dan batas ungu sebelum mengesahkan. Nama kawasan tidak bermaksud seluruh bandar diliputi." : "Check the black road point and purple boundary before confirming. The area name does not mean the whole town is covered."}</p>
-        <p>{pending.distance_m !== null && <strong>{Math.round(pending.distance_m)} m {bm ? "dari pin jingga. " : "from the orange pin. "}</strong>}{pending.distance_m === null ? (bm ? "Titik contoh pada jalan ini, bukan alamat rumah tepat. Pilih pada peta untuk melaraskannya." : "A representative point on this road, not an exact house address. Choose on map to adjust it.") : (bm ? "Titik dipadankan pada jalan terdekat dalam liputan." : "Matched to the nearest loaded road inside coverage.")}</p>
+        <p className="font-bold">{bm ? "Titik permulaan" : "Starting point"}</p>
+        <p className="font-bold">{coverageLabel(pending, language)}</p>
+        <p>{pending.distance_m === null ? (bm ? "Titik contoh di jalan ini. Laraskan pada peta jika perlu." : "Approximate point on this road. Adjust on the map if needed.") : <>{Math.round(pending.distance_m)} m {bm ? "dari pin anda, dipadankan ke jalan terdekat." : "from your pin, matched to the nearest road."}</>}</p>
+        <p>{bm ? "Semak titik hitam dan sempadan ungu sebelum mengesahkan." : "Check the black road marker and purple boundary before confirming."}</p>
+        <p>{bm ? "Demo hanya meliputi sebahagian daripada" : "Demo covers only part of"} {pending.area.name}.</p>
         {matches.length > 1 && <button type="button" onClick={() => setPending(null)} className="min-h-11 w-full rounded-lg border border-stone-300 bg-white font-semibold text-stone-700 hover:bg-stone-50">{bm ? "Pilih hasil lain" : "Choose another match"}</button>}
         <button type="button" onClick={() => { onConfirm(pending); setPending(null); setResults(null); setPoint(null); setMapOpen(false); }} className="min-h-11 w-full rounded-lg bg-stone-900 font-semibold text-white transition hover:bg-stone-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stone-900">{bm ? "Gunakan titik permulaan ini" : "Use this starting point"}</button>
       </div>}

@@ -1,6 +1,7 @@
 "use client";
 
 import "./Dashboard.css";
+import "./WorkspaceSidebar.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AddTownshipModal from "@/components/AddTownshipModal";
 import TownshipMap from "@/components/TownshipMap";
@@ -10,7 +11,6 @@ import { useSharedCatalogue } from "@/lib/evacuation/useSharedCatalogue";
 import { shareTownship } from "@/lib/storage/share-township";
 import { calculateEvacuation, eligibleDestinations, type FloodEvidence } from "@/lib/engine/evacuation";
 import DevelopmentPanel from "@/components/DevelopmentPanel";
-import TrafficWorkspace from "@/components/TrafficWorkspace";
 import { developmentError, evaluateDevelopment, newDevelopment, DEVELOPMENT_LABELS, type DevelopmentStage } from "@/lib/engine/development";
 import type { Area, Streets } from "@/lib/area";
 import { STATUS_COLOR } from "@/lib/colors";
@@ -76,7 +76,6 @@ function DashboardView({
 }: DashboardViewProps) {
   // Mode: "live" (local simulation), "plan" (Plan mode civil fixes), or "route" (Evacuation Safe Routes)
   const [mode, setMode] = useState<"live" | "plan" | "route">("live");
-  const [domain, setDomain] = useState<'flood'|'traffic'>('flood');
   const [modePhase, setModePhase] = useState<"idle" | "leaving" | "entering">("idle");
   const modeTimers = useRef<number[]>([]);
 
@@ -332,8 +331,6 @@ function DashboardView({
     return [];
   }, [mode, simulationScenario, interventions]);
 
-  if(domain === 'traffic') return <TrafficWorkspace key={currentArea.slug} area={currentArea} buildings={currentBuildings} townships={[...areas,...localTownships.filter(t=>!areas.some(a=>a.slug===t.slug)).map(t=>({...t,custom:true}))]} onSelect={onSelectArea} onDownload={onOpenModal} onFlood={()=>setDomain('flood')} />;
-
   return (
     <div className="grid h-dvh overflow-hidden grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_390px] lg:grid-rows-[minmax(0,1fr)]">
       <div className="relative min-h-0 min-w-0">
@@ -347,6 +344,7 @@ function DashboardView({
         floodZones={currentFloodZones}
         statuses={developmentActive ? developmentResult?.stages[developmentStage].peak_statuses ?? {} : activeStatuses}
         interventions={developmentActive ? (developmentResult && developmentStage === "mitigated" && development.mitigation !== "none" ? [{ drain_id: development.drain_id, kind: development.mitigation }] : []) : activeInterventions}
+        withUpgrades={developmentActive ? Boolean(developmentResult && developmentStage === "mitigated" && development.mitigation !== "none") : (simulationScenario === "plan" || mode === "plan")}
         siteBoundary={developmentActive ? development.boundary : undefined}
         siteClosed={developmentActive && !drawingSite}
         siteCaption={developmentActive ? (developmentResult ? `${DEVELOPMENT_LABELS[developmentStage]} · each zone at its own peak` : "Draw site and complete inputs · no scenario preview yet") : undefined}
@@ -366,29 +364,108 @@ function DashboardView({
         }}
       />
       </div>
+      {mode === "live" && (
+        <section className="dashboard-street-status dashboard-mode-surface" aria-label="Street status overview" data-mode-phase={modePhase}>
+          <dl className="grid grid-cols-3 gap-2 lg:grid-cols-1 lg:gap-3">
+            {(["red", "amber", "green"] as const).map((status) => (
+              <div key={status} className="rounded-xl border border-stone-200 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-sm lg:px-4 lg:py-3.5">
+                <dt className="flex min-h-9 items-start gap-1.5 text-[11px] font-medium text-stone-600 lg:min-h-0 lg:text-xs">
+                  <span className="mt-1 size-2 shrink-0 rounded-full" style={{ background: STATUS_COLOR[status] }} />
+                  {status === "red" ? "Flooded streets" : status === "amber" ? "At risk streets" : "Clear streets"}
+                </dt>
+                <dd className="mt-1 text-2xl font-semibold tabular-nums leading-none lg:mt-2 lg:text-3xl" style={{ color: STATUS_COLOR[status] }}>
+                  {streetCounts[status]}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+      {mode === "plan" && !developmentActive && (
+      <section className="dashboard-street-status dashboard-plan-impact dashboard-mode-surface" aria-label="Before vs After Impact" data-mode-phase={modePhase}>
+        <div className="flex flex-col gap-1 rounded-xl border border-stone-200 bg-white/95 px-3 py-2 shadow-sm backdrop-blur-sm">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-700">Before vs After Impact</span>
+          <span className="text-[10px] text-stone-500">Instant Replay (3h Storm)</span>
+        </div>
+
+        <div className="mt-2 grid grid-cols-3 gap-2 text-center lg:grid-cols-1 lg:gap-3 lg:text-left">
+          {/* Metric 1: Flooded Streets */}
+          <div className="rounded-xl border border-stone-200 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-sm lg:px-4 lg:py-3.5">
+            <div className="min-h-8 text-[11px] text-stone-600 lg:min-h-0 lg:text-xs">Flooded Streets</div>
+            <div className="mt-2 flex items-baseline justify-center lg:justify-start gap-1 font-semibold tabular-nums text-stone-900">
+              <span className="text-stone-400 line-through text-xs">{baselineResult.streets_flooded}</span>
+              <span className="text-xl lg:text-2xl text-emerald-600">{plannedResult.streets_flooded}</span>
+            </div>
+            <div className="text-[10px] font-medium text-emerald-700">
+              {baselineResult.streets_flooded > plannedResult.streets_flooded
+                ? `-${baselineResult.streets_flooded - plannedResult.streets_flooded} streets`
+                : "No change"}
+            </div>
+          </div>
+
+          {/* Metric 2: Deepest Water */}
+          <div className="rounded-xl border border-stone-200 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-sm lg:px-4 lg:py-3.5">
+            <div className="min-h-8 text-[11px] text-stone-600 lg:min-h-0 lg:text-xs">Max Depth</div>
+            <div className="mt-2 flex items-baseline justify-center lg:justify-start gap-1 font-semibold tabular-nums text-stone-900">
+              <span className="text-stone-400 line-through text-xs">{baselineResult.deepest_cm}</span>
+              <span className="text-xl lg:text-2xl text-emerald-600">{plannedResult.deepest_cm}</span>
+              <span className="text-[10px] text-stone-400">cm</span>
+            </div>
+            <div className="text-[10px] font-medium text-emerald-700">
+              {baselineResult.deepest_cm > plannedResult.deepest_cm
+                ? `-${(baselineResult.deepest_cm - plannedResult.deepest_cm).toFixed(1)} cm`
+                : "No change"}
+            </div>
+          </div>
+
+          {/* Metric 3: Time to First Red */}
+          <div className="rounded-xl border border-stone-200 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur-sm lg:px-4 lg:py-3.5">
+            <div className="min-h-8 text-[11px] text-stone-600 lg:min-h-0 lg:text-xs">1st Flood Time</div>
+            <div className="mt-2 flex items-baseline justify-center lg:justify-start gap-1 font-semibold tabular-nums text-stone-900">
+              <span className="text-stone-400 line-through text-xs">
+                {baselineResult.minutes_to_first_red ? `${baselineResult.minutes_to_first_red}m` : "None"}
+              </span>
+              <span className="text-xl lg:text-2xl text-blue-600">
+                {plannedResult.minutes_to_first_red ? `${plannedResult.minutes_to_first_red}m` : "Safe!"}
+              </span>
+            </div>
+            <div className="text-[10px] font-medium text-blue-700">
+              {plannedResult.minutes_to_first_red === null
+                ? "Zero overflow!"
+                : plannedResult.minutes_to_first_red > (baselineResult.minutes_to_first_red ?? 0)
+                ? `+${plannedResult.minutes_to_first_red - (baselineResult.minutes_to_first_red ?? 0)}m buffer`
+                : "Same buffer"}
+            </div>
+          </div>
+        </div>
+      </section>
+      )}
       <MapTownshipNavigation current={currentArea} townships={[...areas, ...localTownships.filter(item => !areas.some(area => area.slug === item.slug)).map(item => ({ ...item, custom: true }))]} onSelect={onSelectArea} onDownload={onOpenModal} />
       </div>
 
-      <aside className="dashboard-mode-surface flex max-h-[50dvh] flex-col gap-5 overflow-y-auto border-stone-200 bg-white p-5 lg:max-h-none lg:border-l" data-mode-phase={modePhase}>
+      <aside className={`workspace-sidebar dashboard-mode-surface flex max-h-[50dvh] flex-col overflow-y-auto lg:max-h-none lg:border-l`} data-mode-phase={modePhase}>
         {/* Top Header */}
-        <header className="flex flex-col gap-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold tracking-tight text-stone-900">HydroTwin</h1>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-stone-500">Workspace</span>
+        <header className="workspace-header">
+          <div className="workspace-brand-row">
+            <div className="workspace-brand">
+              <span className="workspace-brand-mark" aria-hidden="true">
+                <svg width="17" height="19" viewBox="0 0 24 26" fill="none"><path d="M12 2C10 7 4 11 4 16a8 8 0 0 0 16 0c0-5-6-9-8-14Z" fill="currentColor" /><path d="M8 16a4 4 0 0 0 4 4" stroke="#163e34" strokeWidth="1.5" strokeLinecap="round" /></svg>
+              </span>
+              <h1>HydroTwin</h1>
+            </div>
             <a
               href={`/phone?area=${encodeURIComponent(currentArea.slug)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-medium text-stone-700 shadow-2xs transition hover:border-stone-400 hover:bg-stone-50"
+              className="workspace-phone-link"
             >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3" /><path d="M10 18h4" /></svg>
               Phone Links
             </a>
           </div>
-          <div className="grid grid-cols-2 gap-1 rounded-lg bg-stone-100 p-1 text-xs" aria-label="Analysis domain"><button aria-pressed="true" className="rounded-md bg-white px-3 py-2 font-semibold text-emerald-700 shadow-sm">Flood</button><button className="rounded-md px-3 py-2 text-stone-600 hover:bg-white" onClick={()=>{storm.pause();setDomain('traffic');}}>Traffic</button></div>
-          <nav className="dashboard-mode-tabs" aria-label="Dashboard modes">
+          <div>
+          <span className="workspace-eyebrow">Overview</span>
+          <nav className="workspace-modes" aria-label="Dashboard modes">
             {([
               { id: "live", label: "Live Warning", path: "M3 12h4l3-8 4 16 3-8h4" },
               { id: "plan", label: "Plan Mode", path: "M4 4h16v16H4z M8 4v5 M13 4v3 M20 9h-5 M4 15h5v5" },
@@ -398,6 +475,7 @@ function DashboardView({
               <span>{item.label}</span>
             </button>)}
           </nav>
+          </div>
 
         </header>
 
@@ -410,112 +488,6 @@ function DashboardView({
           {planMode === "development" ? <DevelopmentPanel area={currentArea} drains={currentDrains} streets={currentStreets} draft={development} onChange={setDevelopment} drawing={drawingSite} onDrawing={setDrawingSite} result={developmentResult} error={developmentValidation} stage={developmentStage} onStage={setDevelopmentStage} /> : (
           /* ================= PLAN MODE VIEW ================= */
           <div className="flex flex-col gap-5">
-            {/* Before vs After Impact Scorecard */}
-            <section className="rounded-xl border border-stone-200 bg-stone-50/50 p-4">
-              <div className="flex items-center justify-between pb-2 border-b border-stone-200">
-                <span className="text-xs font-semibold uppercase tracking-wider text-stone-700">Before vs After Impact</span>
-                <span className="text-[11px] font-mono text-stone-500">Instant Replay (3h Storm)</span>
-              </div>
-
-              <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                {/* Metric 1: Flooded Streets */}
-                <div className="rounded-lg border border-stone-200 bg-white p-2.5">
-                  <div className="text-xs text-stone-500">Flooded Streets</div>
-                  <div className="mt-1 flex items-baseline justify-center gap-1 font-semibold tabular-nums text-stone-900">
-                    <span className="text-stone-400 line-through text-xs">{baselineResult.streets_flooded}</span>
-                    <span className="text-base text-emerald-600">{plannedResult.streets_flooded}</span>
-                  </div>
-                  <div className="text-[10px] font-medium text-emerald-700">
-                    {baselineResult.streets_flooded > plannedResult.streets_flooded
-                      ? `-${baselineResult.streets_flooded - plannedResult.streets_flooded} streets`
-                      : "No change"}
-                  </div>
-                </div>
-
-                {/* Metric 2: Deepest Water */}
-                <div className="rounded-lg border border-stone-200 bg-white p-2.5">
-                  <div className="text-xs text-stone-500">Max Depth</div>
-                  <div className="mt-1 flex items-baseline justify-center gap-1 font-semibold tabular-nums text-stone-900">
-                    <span className="text-stone-400 line-through text-xs">{baselineResult.deepest_cm}</span>
-                    <span className="text-base text-emerald-600">{plannedResult.deepest_cm}</span>
-                    <span className="text-[10px] text-stone-400">cm</span>
-                  </div>
-                  <div className="text-[10px] font-medium text-emerald-700">
-                    {baselineResult.deepest_cm > plannedResult.deepest_cm
-                      ? `-${(baselineResult.deepest_cm - plannedResult.deepest_cm).toFixed(1)} cm`
-                      : "No change"}
-                  </div>
-                </div>
-
-                {/* Metric 3: Time to First Red */}
-                <div className="rounded-lg border border-stone-200 bg-white p-2.5">
-                  <div className="text-xs text-stone-500">1st Flood Time</div>
-                  <div className="mt-1 flex items-baseline justify-center gap-1 font-semibold tabular-nums text-stone-900">
-                    <span className="text-stone-400 line-through text-xs">
-                      {baselineResult.minutes_to_first_red ? `${baselineResult.minutes_to_first_red}m` : "None"}
-                    </span>
-                    <span className="text-base text-blue-600">
-                      {plannedResult.minutes_to_first_red ? `${plannedResult.minutes_to_first_red}m` : "Safe!"}
-                    </span>
-                  </div>
-                  <div className="text-[10px] font-medium text-blue-700">
-                    {plannedResult.minutes_to_first_red === null
-                      ? "Zero overflow!"
-                      : plannedResult.minutes_to_first_red > (baselineResult.minutes_to_first_red ?? 0)
-                      ? `+${plannedResult.minutes_to_first_red - (baselineResult.minutes_to_first_red ?? 0)}m buffer`
-                      : "Same buffer"}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Live 3D Storm Simulation with Upgrades */}
-            <section className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-xs">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <span className="text-xs font-semibold uppercase tracking-wider text-stone-700">Watch Plan in Action (3D Map)</span>
-
-                </div>
-                <div className="text-right">
-                  <span className="font-mono text-sm font-bold text-stone-900">
-                    {clock(storm.minute)}
-                  </span>
-                  <span className="text-[10px] text-stone-400 block font-normal">/ {clock(REPLAY_END_MINUTE)}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={storm.running ? storm.pause : storm.start}
-                  disabled={storm.finished}
-                  className="flex-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-3 text-xs font-semibold shadow-xs transition flex items-center justify-center gap-1.5"
-                >
-                  {storm.running ? "⏸ Pause Replay" : storm.minute === 0 ? "▶ Play Storm with Upgrades" : "▶ Resume Replay"}
-                </button>
-                <button
-                  type="button"
-                  onClick={storm.reset}
-                  disabled={storm.minute === 0 && !storm.running}
-                  className="rounded-lg border border-stone-200 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 transition"
-                >
-                  Reset
-                </button>
-                <div className="flex rounded-lg border border-stone-200 text-xs">
-                  {SPEEDS.map((x) => (
-                    <button
-                      key={x}
-                      type="button"
-                      onClick={() => storm.setSpeed(x)}
-                      className={`px-2 py-1 ${storm.speed === x ? "bg-stone-900 text-white font-semibold" : "text-stone-600"}`}
-                    >
-                      {x}×
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </section>
-
             {/* Active Interventions Manager */}
             <section className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
@@ -628,10 +600,57 @@ function DashboardView({
               <button
                 type="button"
                 onClick={() => addIntervention(selectedDrainId, selectedKind)}
-                className="mt-1 w-full rounded-lg bg-stone-900 py-2 text-xs font-medium text-white shadow-xs hover:bg-stone-800 transition"
+                className={`workspace-primary mt-1 w-full rounded-lg py-2 text-xs transition`}
               >
                 + Apply Intervention to {selectedDrainId}
               </button>
+            </section>
+
+            {/* Live 3D Storm Simulation with Upgrades */}
+            <section className="rounded-xl border border-stone-200 bg-white p-3.5 shadow-xs">
+              <div className="flex items-center justify-between mb-2">
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wider text-stone-700">Watch Plan in Action (3D Map)</span>
+
+                </div>
+                <div className="text-right">
+                  <span className="font-mono text-sm font-bold text-stone-900">
+                    {clock(storm.minute)}
+                  </span>
+                  <span className="text-[10px] text-stone-400 block font-normal">/ {clock(REPLAY_END_MINUTE)}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={storm.running ? storm.pause : storm.start}
+                  disabled={storm.finished}
+                  className={`workspace-primary flex-1 rounded-lg py-2 px-3 text-xs transition flex items-center justify-center gap-1.5`}
+                >
+                  {storm.running ? "⏸ Pause Replay" : storm.minute === 0 ? "▶ Play Storm with Upgrades" : "▶ Resume Replay"}
+                </button>
+                <button
+                  type="button"
+                  onClick={storm.reset}
+                  disabled={storm.minute === 0 && !storm.running}
+                  className="rounded-lg border border-stone-200 px-3 py-2 text-xs text-stone-600 hover:bg-stone-50 transition"
+                >
+                  Reset
+                </button>
+                <div className="flex rounded-lg border border-stone-200 text-xs">
+                  {SPEEDS.map((x) => (
+                    <button
+                      key={x}
+                      type="button"
+                      onClick={() => storm.setSpeed(x)}
+                      className={`px-2 py-1 ${storm.speed === x ? "bg-stone-900 text-white font-semibold" : "text-stone-600"}`}
+                    >
+                      {x}×
+                    </button>
+                  ))}
+                </div>
+              </div>
             </section>
 
             {/* Save & Load Scenarios */}
@@ -652,7 +671,7 @@ function DashboardView({
                 <button
                   type="button"
                   onClick={saveScenario}
-                  className="rounded-lg bg-stone-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-stone-800"
+                  className={`workspace-primary rounded-lg px-3 py-1.5 text-xs`}
                 >
                   Save
                 </button>
@@ -725,36 +744,31 @@ function DashboardView({
         ) : (
           /* ================= LIVE MODE VIEW ================= */
           <>
-            <div className="flex items-center justify-between rounded-xl border border-stone-200 bg-stone-50 p-2.5 text-xs">
-              <span className="font-semibold text-stone-700">Data source</span>
-              <span className="font-medium text-stone-700">Local simulation</span>
-            </div>
-
             {/* Simulation Infrastructure Scenario Toggle */}
-            <div className="rounded-xl border border-stone-200 p-2.5 bg-stone-50 flex items-center justify-between text-xs">
+            <div className="workspace-infrastructure">
               <div>
-                <span className="font-semibold text-stone-800">Drain Infrastructure:</span>
+                <strong>Drain Infrastructure</strong>
                 {simulationScenario === "plan" && interventions.length > 0 && (
                   <p className="text-[10px] text-stone-500">
                     Testing with {interventions.length} active civil upgrades
                   </p>
                 )}
               </div>
-              <div className="flex rounded-md bg-stone-200 p-0.5 font-medium">
+              <div className="workspace-segmented">
                 <button
                   type="button"
+                  aria-pressed={simulationScenario === "baseline"}
                   onClick={() => {
                     setSimulationScenario("baseline");
                     storm.reset();
                   }}
-                  className={`px-2.5 py-1 rounded transition ${
-                    simulationScenario === "baseline" ? "bg-white text-stone-900 shadow-xs font-semibold" : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className="px-2.5 py-1 text-stone-600"
                 >
                   Baseline
                 </button>
                 <button
                   type="button"
+                  aria-pressed={simulationScenario === "plan"}
                   onClick={() => {
                     if (interventions.length === 0) {
                       applyRecommendedPlan();
@@ -762,19 +776,17 @@ function DashboardView({
                     setSimulationScenario("plan");
                     storm.reset();
                   }}
-                  className={`px-2.5 py-1 rounded transition flex items-center gap-1 ${
-                    simulationScenario === "plan" ? "bg-emerald-600 text-white shadow-xs font-semibold" : "text-stone-600 hover:text-stone-900"
-                  }`}
+                  className="px-2.5 py-1 flex items-center gap-1 text-stone-600"
                 >
                   <span>With Upgrades</span>
                   {interventions.length > 0 && (
-                    <span className="px-1 rounded bg-emerald-700 text-[10px]">{interventions.length}</span>
+                    <span className="workspace-upgrade-count">{interventions.length}</span>
                   )}
                 </button>
               </div>
             </div>
 
-            <section className="rounded-xl border border-stone-200 p-4">
+            <section className="workspace-storm">
               <div className="flex items-baseline justify-between">
                 <span className="text-sm text-stone-500">Storm time</span>
                 <span className="font-mono text-2xl tabular-nums">
@@ -787,23 +799,23 @@ function DashboardView({
                 <span className="text-stone-400"> · simulated storm</span>
               </p>
               <p className="mt-1 text-xs text-stone-500">{displayedStorm.label}{displayedStorm.rainMmPerHour !== null ? ` · Playback ${displayedStorm.speed}×` : ""}</p>
-              <div className="mt-3 flex gap-2">
+              <div className="workspace-storm-controls">
                 <button
                   onClick={storm.running ? storm.pause : storm.start}
                   disabled={storm.finished}
-                  className="flex-1 rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white disabled:opacity-40"
+                  className={`workspace-primary flex-1 rounded-lg px-3 py-2 text-xs disabled:opacity-40`}
                 >
                   {storm.running ? "Pause" : storm.finished ? "Complete" : storm.minute === 0 ? "Start storm" : "Resume"}
                 </button>
-                <button onClick={storm.reset} className="rounded-lg border border-stone-300 px-3 py-2 text-sm disabled:opacity-40">
+                <button onClick={storm.reset} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs disabled:opacity-40">
                   Reset
                 </button>
-                <div className="flex overflow-hidden rounded-lg border border-stone-300 text-sm">
+                <div className="workspace-speed-switch">
                   {SPEEDS.map((x) => (
                     <button
                       key={x}
+                      aria-pressed={displayedStorm.rainMmPerHour !== null && displayedStorm.speed === x}
                       onClick={() => storm.setSpeed(x)}
-                      className={`px-2.5 ${displayedStorm.rainMmPerHour !== null && displayedStorm.speed === x ? "bg-stone-900 text-white" : ""}`}
                     >
                       {x}×
                     </button>
@@ -812,20 +824,9 @@ function DashboardView({
               </div>
             </section>
 
-            <section className="grid grid-cols-3 gap-2 text-center">
-              {(["red", "amber", "green"] as const).map((k) => (
-                <div key={k} className="rounded-xl border border-stone-200 p-3">
-                  <div className="text-2xl font-semibold tabular-nums" style={{ color: STATUS_COLOR[k] }}>
-                    {streetCounts[k]}
-                  </div>
-                  <div className="text-xs text-stone-500">{k === "red" ? "flooded" : k === "amber" ? "at risk" : "clear"} streets</div>
-                </div>
-              ))}
-            </section>
-
-            <section>
-              <h2 className="mb-2 text-sm font-medium text-stone-500">Drains</h2>
-              <ul className="flex flex-col gap-2">
+            <section className="workspace-drains">
+              <h2>Drains</h2>
+              <ul className="workspace-drain-list">
                 {ranked.map(({ drain, s }) => {
                   const activeInv =
                     simulationScenario === "plan"
@@ -833,7 +834,7 @@ function DashboardView({
                       : null;
 
                   return (
-                    <li key={drain.id} className="rounded-lg border border-stone-200 px-3 py-2">
+                    <li key={drain.id}>
                       <div className="flex items-center gap-2">
                         <span className="size-2.5 rounded-full" style={{ background: STATUS_COLOR[s.status] }} />
                         <span className="font-medium">{drain.id}</span>
@@ -873,7 +874,7 @@ function DashboardView({
           </>
         )}
 
-        <footer className="mt-auto pt-4 border-t border-stone-100 text-xs leading-relaxed text-stone-400">
+        <footer className="workspace-footer">
           Drains and storm are simulated; drain elevations are real (Open-Meteo). Water height is drawn
           ×{WATER_HEIGHT_SCALE} so it can be seen. Streets and buildings © OpenStreetMap contributors.
         </footer>

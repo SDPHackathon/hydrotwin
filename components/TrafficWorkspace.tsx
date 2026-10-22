@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import "./WorkspaceSidebar.css";
 import type { Area } from '@/lib/area';
 import TownshipMap from './TownshipMap';
 import MapTownshipNavigation from './MapTownshipNavigation';
@@ -505,14 +506,14 @@ export default function TrafficWorkspace({
         </div>
       </div>
 
-      <aside className="traffic-panel">
+      <aside className={`traffic-panel workspace-sidebar`}>
         <header>
           <span className="traffic-eyebrow">HydroTwin / Township planning</span>
           <h1>Township impact</h1>
           <p>Draw multiple sites to evaluate whole-township traffic distribution and bottlenecks.</p>
         </header>
 
-        <div className="traffic-switch" aria-label="Analysis domain">
+        <div className="workspace-domain-switch" aria-label="Analysis domain">
           <button onClick={onFlood}>Flood</button>
           <button aria-pressed="true">Traffic</button>
         </div>
