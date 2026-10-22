@@ -1,16 +1,22 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { rainAt, STORM_MINUTES } from "@/lib/engine/storm";
 import { stepLevel } from "@/lib/engine/sim";
 import type { Drain, DrainStatus } from "@/lib/engine/types";
-import drainsData from "@/public/data/bukit-raja/drains.json";
+import { useTownshipData } from "@/lib/evacuation/useTownshipData";
+import type { RouteTownship } from "@/lib/engine/township";
 
-const drains: Drain[] = drainsData as Drain[];
 const END_MINUTE = STORM_MINUTES + 30;
 
 export default function ControlPage() {
+  const data = useTownshipData();
+  if (!data.bundle) return <main className="mx-auto max-w-md p-5 text-sm">{data.error ?? "Loading township simulator…"}</main>;
+  return <ControlTownship key={data.slug} bundle={data.bundle} areas={data.areas} onAreaChange={data.select} />;
+}
+function ControlTownship({ bundle, areas, onAreaChange }: { bundle: RouteTownship; areas: RouteTownship["area"][]; onAreaChange: (slug: string) => void }) {
+  const drains: Drain[] = bundle.drains;
+  const areaSlug = bundle.area.slug;
   const [minute, setMinute] = useState(0);
   const [running, setRunning] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -38,7 +44,7 @@ export default function ControlPage() {
         source: "sim" as const,
       }));
 
-      const res = await fetch("/api/risk-engine", {
+      const res = await fetch(`/api/risk-engine?area=${encodeURIComponent(areaSlug)}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -59,13 +65,14 @@ export default function ControlPage() {
     } catch {
       setSyncStatus("error");
     }
-  }, []);
+  }, [drains, areaSlug]);
 
   // Tick simulation forward
   const tick = useCallback(() => {
     const m = minuteRef.current;
     if (m >= END_MINUTE) {
       setRunning(false);
+      pushReadings(m, levelsRef.current, false, speed);
       return;
     }
     const nextMinute = m + 1;
@@ -79,8 +86,10 @@ export default function ControlPage() {
       nextLevels[d.id] = Math.round(stepLevel(d, prev, rain) * 10) / 10;
     }
     setLevels(nextLevels);
-    pushReadings(nextMinute, nextLevels, true, speed);
-  }, [pushReadings, speed]);
+    const nextRunning = nextMinute < END_MINUTE;
+    if (!nextRunning) setRunning(false);
+    pushReadings(nextMinute, nextLevels, nextRunning, speed);
+  }, [pushReadings, speed, drains]);
 
   useEffect(() => {
     if (!running) return;
@@ -89,6 +98,7 @@ export default function ControlPage() {
   }, [running, speed, tick]);
 
   const handleStart = () => {
+    if (minuteRef.current >= END_MINUTE) return;
     setRunning(true);
     pushReadings(minuteRef.current, levelsRef.current, true, speed);
   };
@@ -100,15 +110,17 @@ export default function ControlPage() {
 
   const handleReset = async () => {
     setRunning(false);
+    setSpeed(1);
     minuteRef.current = 0;
     setMinute(0);
     const zeroLevels = Object.fromEntries(drains.map((d) => [d.id, 0]));
     setLevels(zeroLevels);
     try {
-      await fetch("/api/risk-engine/reset", { method: "POST" });
+      const res = await fetch(`/api/risk-engine/reset?area=${encodeURIComponent(areaSlug)}`, { method: "POST" });
+      if (!res.ok) throw new Error("Reset failed");
       setSyncStatus("synced");
     } catch {
-      // Ignored
+      setSyncStatus("error");
     }
   };
 
@@ -130,17 +142,13 @@ export default function ControlPage() {
               <span className="font-semibold text-stone-900 tracking-tight">HydroTwin Control</span>
               <span className={`inline-block w-2 h-2 rounded-full ${syncStatus === "synced" ? "bg-emerald-500" : syncStatus === "syncing" ? "bg-amber-500 animate-pulse" : "bg-rose-500"}`} />
             </div>
-            <p className="text-[11px] text-stone-500">Bukit Raja · Live Phone Controller</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs">
-            <Link href="/" className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium">Map</Link>
-            <Link href="/resident" className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium">Resident</Link>
-            <Link href="/guard" className="px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700 font-medium">Guard</Link>
+            <p className="text-[11px] text-stone-500">{bundle.area.name} · Live Phone Controller</p>
           </div>
         </div>
       </header>
 
       <main className="max-w-md mx-auto px-4 pt-4 space-y-4">
+        <label className="block rounded-xl border border-stone-200 bg-white p-4 text-xs font-semibold">Township<select value={areaSlug} onChange={(e) => onAreaChange(e.target.value)} className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 p-2">{areas.map((a) => <option key={a.slug} value={a.slug}>{a.name}</option>)}</select></label>
         {/* Storm Controller Card */}
         <section className="bg-white rounded-xl border border-stone-200 p-4 shadow-xs">
           <div className="flex items-center justify-between mb-3">
@@ -172,9 +180,10 @@ export default function ControlPage() {
             {!running ? (
               <button
                 onClick={handleStart}
-                className="col-span-2 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 shadow-xs transition"
+                disabled={minute >= END_MINUTE}
+                className="col-span-2 py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white rounded-lg font-medium text-sm flex items-center justify-center gap-1.5 shadow-xs transition disabled:opacity-40"
               >
-                <span>▶</span> Start Storm
+                <span>▶</span> {minute >= END_MINUTE ? "Storm complete" : "Start Storm"}
               </button>
             ) : (
               <button

@@ -1,15 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { parseHelpRequest, type HelpRequest } from "@/lib/engine/help";
-import { recordCheckIn } from "@/lib/server-state";
+import { cancelResidentTask, recordCheckIn } from "@/lib/server-state";
 
-// Resident check-in: { resident_id, state: "safe" | "need_help", help_type?, people?, note? }.
+// Resident check-in: { resident_id, state: "safe" | "need_help" | "cancel", help_type?, people?, note? }.
 // What a resident may ask for is decided in lib/engine/help.ts, not here.
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { resident_id, state } = body;
+    const { resident_id, state, action } = body;
 
-    if (!resident_id || (state !== "safe" && state !== "need_help")) {
+    if (!resident_id) {
+      return NextResponse.json({ error: "resident_id required" }, { status: 400 });
+    }
+
+    if (state === "cancel" || action === "cancel") {
+      const res = cancelResidentTask(resident_id);
+      if (!res.ok) return NextResponse.json({ error: res.error }, { status: 404 });
+      return NextResponse.json(res);
+    }
+
+    if (state !== "safe" && state !== "need_help") {
       return NextResponse.json({ error: "Invalid check-in parameters" }, { status: 400 });
     }
 

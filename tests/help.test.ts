@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  applyTaskAction, findResponderRoute, parseHelpRequest, MAX_NOTE_CHARS, WATER_PENALTY,
+  applyTaskAction, findResponderRoute, parseHelpName, parseHelpRequest, MAX_HELP_NAME_CHARS, MAX_NOTE_CHARS, WATER_PENALTY,
   type GuardPost,
 } from "../lib/engine/help.ts";
 import type { StreetFeature } from "../lib/engine/route.ts";
@@ -13,6 +13,15 @@ import { rainAt, STORM_MINUTES } from "../lib/engine/storm.ts";
 import { assess } from "../lib/engine/risk.ts";
 
 // --- help request ---------------------------------------------------------------------------
+
+test("help names are required, bounded and normalized without excluding Unicode names", () => {
+  assert.equal(parseHelpName("  Demo   Resident  "), "Demo Resident");
+  assert.equal(parseHelpName("Demo José"), "Demo José");
+  assert.equal(parseHelpName("A".repeat(MAX_HELP_NAME_CHARS)).length, MAX_HELP_NAME_CHARS);
+  for (const value of [undefined, null, 4, {}, "", "   ", "A".repeat(MAX_HELP_NAME_CHARS + 1), "Demo\nResident", "Demo\u0000Resident"]) {
+    assert.throws(() => parseHelpName(value));
+  }
+});
 
 test("a bare check-in becomes a plain 'something else, 1 person' request", () => {
   const parsed = parseHelpRequest({});
@@ -70,6 +79,75 @@ test("resolve works straight from open (guard arrived without tapping On my way)
   assert.ok(done.ok);
   assert.equal(done.task.state, "done");
   assert.equal(done.task.responder_name, "Guard Lim");
+  assert.equal(done.task.outcome, "other");
+});
+
+test("cancel moves open → cancelled with cancelled_at, without mutating the input", () => {
+  const result = applyTaskAction(openTask, "cancel", null, "2026-10-17T10:05:00Z");
+  assert.ok(result.ok);
+  assert.equal(result.task.state, "cancelled");
+  assert.equal(result.task.cancelled_at, "2026-10-17T10:05:00Z");
+  assert.equal(openTask.state, "open");
+});
+
+test("cancel moves on_the_way → cancelled and preserves the responding guard", () => {
+  const accepted = applyTaskAction(openTask, "accept", "Guard Rahim", "2026-10-17T10:01:00Z");
+  assert.ok(accepted.ok);
+  const cancelled = applyTaskAction(accepted.task, "cancel", null, "2026-10-17T10:04:00Z");
+  assert.ok(cancelled.ok);
+  assert.equal(cancelled.task.state, "cancelled");
+  assert.equal(cancelled.task.responder_name, "Guard Rahim");
+  assert.equal(cancelled.task.cancelled_at, "2026-10-17T10:04:00Z");
+});
+
+test("a done task cannot be cancelled; a cancelled task cannot be accepted, resolved, or re-cancelled", () => {
+  const done = applyTaskAction(openTask, "resolve", "Guard Rahim", "2026-10-17T10:10:00Z");
+  assert.ok(done.ok);
+  assert.equal(applyTaskAction(done.task, "cancel", null, "2026-10-17T10:11:00Z").ok, false);
+
+  const cancelled = applyTaskAction(openTask, "cancel", null, "2026-10-17T10:05:00Z");
+  assert.ok(cancelled.ok);
+  assert.equal(applyTaskAction(cancelled.task, "cancel", null, "2026-10-17T10:06:00Z").ok, false);
+  assert.equal(applyTaskAction(cancelled.task, "accept", "Guard Rahim", "2026-10-17T10:06:00Z").ok, false);
+  assert.equal(applyTaskAction(cancelled.task, "resolve", "Guard Rahim", "2026-10-17T10:06:00Z").ok, false);
+});
+
+test("resolve records the selected outcome and rejects invalid outcomes", () => {
+  for (const outcome of ["assisted_upstairs", "evacuated", "confirmed_safe", "other"] as const) {
+    const res = applyTaskAction(openTask, "resolve", "Guard Rahim", "2026-10-17T10:10:00Z", outcome);
+    assert.ok(res.ok);
+    assert.equal(res.task.outcome, outcome);
+  }
+  const withNote = applyTaskAction(
+    openTask,
+    "resolve",
+    "Guard Rahim",
+    "2026-10-17T10:10:00Z",
+    "other",
+    "  Delivered rations and blankets  ",
+  );
+  assert.ok(withNote.ok);
+  assert.equal(withNote.task.outcome, "other");
+  assert.equal(withNote.task.outcome_note, "Delivered rations and blankets");
+
+  const tooLong = applyTaskAction(
+    openTask,
+    "resolve",
+    "Guard Rahim",
+    "2026-10-17T10:10:00Z",
+    "other",
+    "a".repeat(141),
+  );
+  assert.equal(tooLong.ok, false);
+
+  const invalid = applyTaskAction(
+    openTask,
+    "resolve",
+    "Guard Rahim",
+    "2026-10-17T10:10:00Z",
+    "teleported" as unknown as import("../lib/engine/types.ts").TaskOutcome,
+  );
+  assert.equal(invalid.ok, false);
 });
 
 // --- responder route ------------------------------------------------------------------------

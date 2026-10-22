@@ -12,8 +12,8 @@ const UA = "hydrotwin/0.1 (SDP University Hackathon 2026 prototype)";
 const BANDS = { road: 6, yard: 24 };
 
 const OVERPASS_ENDPOINTS = [
+  "https://overpass.openstreetmap.fr/api/interpreter",
   "https://overpass-api.de/api/interpreter",
-  "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
 ];
 
@@ -58,7 +58,7 @@ async function fetchOverpass(query: string) {
     for (const url of OVERPASS_ENDPOINTS) {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 20000);
+        const timeout = setTimeout(() => controller.abort(), 35000);
         const res = await fetch(url, {
           method: "POST",
           headers: { "User-Agent": UA, "Content-Type": "application/x-www-form-urlencoded" },

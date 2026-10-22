@@ -4,6 +4,7 @@ export const DEMO_RESIDENTS: DemoResident[] = [
   {
     id: "11111111-1111-4111-8111-111111111111",
     display_name: "Pak Dollah",
+    evacuation_assistance: "required",
     street_id: "w164812609",
     street_name: "Jalan Gamelan 1F",
     drain_id: "D08",
@@ -13,6 +14,7 @@ export const DEMO_RESIDENTS: DemoResident[] = [
   {
     id: "22222222-2222-4222-8222-222222222222",
     display_name: "Puan Siti Rokiah",
+    evacuation_assistance: "required",
     street_id: "w164812661",
     street_name: "Jalan Gamelan 1E",
     drain_id: "D08",
@@ -31,6 +33,7 @@ export const DEMO_RESIDENTS: DemoResident[] = [
   {
     id: "44444444-4444-4444-8444-444444444444",
     display_name: "Cikgu Aminah",
+    evacuation_assistance: "required",
     street_id: "w164812569",
     street_name: "Jalan Zapin 4B",
     drain_id: "D07",
@@ -40,6 +43,7 @@ export const DEMO_RESIDENTS: DemoResident[] = [
   {
     id: "55555555-5555-4555-8555-555555555555",
     display_name: "Uncle Muthu",
+    evacuation_assistance: "required",
     street_id: "w164812603",
     street_name: "Jalan Zapin 5B",
     drain_id: "D07",
@@ -67,6 +71,7 @@ export const DEMO_RESIDENTS: DemoResident[] = [
   {
     id: "88888888-8888-4888-8888-888888888888",
     display_name: "Puan Salmah",
+    evacuation_assistance: "required",
     street_id: "w164812620",
     street_name: "Jalan Makyong 4B/KU5",
     drain_id: "D01",

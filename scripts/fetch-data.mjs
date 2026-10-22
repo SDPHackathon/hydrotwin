@@ -46,8 +46,11 @@ const OUT = new URL(`../public/data/${AREA.slug}/`, import.meta.url);
 
 const ROAD_CLASSES = "primary|secondary|tertiary|residential|unclassified|living_street";
 
-// Public Overpass servers are often busy (502/504) — try each a few times.
-const OVERPASS = ["https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter"];
+const OVERPASS = [
+  "https://overpass.openstreetmap.fr/api/interpreter",
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
 
 async function overpass(query) {
   for (let attempt = 0; attempt < 3; attempt++) {

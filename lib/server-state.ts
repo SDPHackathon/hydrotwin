@@ -1,11 +1,16 @@
-import type { Drain, DrainStatus, GuardTask, HelpType } from "@/lib/engine/types";
+import type { Drain, DrainStatus, GuardTask, HelpType, TaskOutcome } from "@/lib/engine/types";
 import { assess } from "@/lib/engine/risk";
 import { applyTaskAction, type HelpRequest, type TaskAction } from "@/lib/engine/help";
 import { DEMO_RESIDENTS } from "@/lib/residents-data";
 import { getServerSupabase } from "@/lib/supabase";
 import drainsData from "@/public/data/bukit-raja/drains.json";
+import type { FloodEvidence } from "@/lib/engine/evacuation";
 
 interface ServerStore {
+  observedAt: Record<string, number>;
+  revision: number;
+  sessionId: string;
+  stormUpdatedAt: number | null;
   minute: number;
   running: boolean;
   speed: number;
@@ -30,6 +35,10 @@ function initStore(): ServerStore {
   }
 
   return {
+    observedAt: {},
+    revision: 0,
+    sessionId: Date.now().toString(36),
+    stormUpdatedAt: null,
     minute: 0,
     running: false,
     speed: 1,
@@ -46,13 +55,22 @@ if (!globalStore.__HYDROTWIN_STORE__) {
   globalStore.__HYDROTWIN_STORE__ = initStore();
 }
 const store = globalStore.__HYDROTWIN_STORE__;
+// Existing dev hot-reload stores have no observation evidence. Fail closed until new readings.
+store.observedAt ??= {};
+store.revision ??= 0;
+store.sessionId ??= Date.now().toString(36);
 
 export function getDrains(): Drain[] {
   return drains;
 }
 
 export function getState() {
+  const floodEvidence: FloodEvidence = { source: "phone_demo", revision: `${store.sessionId}:${store.revision}`,
+    observed_at: { ...store.observedAt }, controller_at: store.stormUpdatedAt, running: store.running, minute: store.minute };
   return {
+    floodEvidence,
+    serverNow: Date.now(),
+    stormAgeMs: store.stormUpdatedAt == null ? null : Math.max(0, Date.now() - store.stormUpdatedAt),
     minute: store.minute,
     running: store.running,
     speed: store.speed,
@@ -67,6 +85,10 @@ export function resetState() {
   store.minute = 0;
   store.running = false;
   store.speed = 1;
+  store.stormUpdatedAt = Date.now();
+  // An explicit simulator reset establishes zero readings; process startup does not.
+  store.observedAt = Object.fromEntries(drains.map((d) => [d.id, store.stormUpdatedAt!]));
+  store.revision++;
   store.histories = fresh.histories;
   store.statuses = fresh.statuses;
   store.guardTasks = [];
@@ -90,12 +112,13 @@ export async function processReadings(readings: Array<{
   sim_minute?: number;
   source?: "sim" | "device";
 }>, minute?: number, running?: boolean, speed?: number) {
+  if (minute !== undefined || running !== undefined || speed !== undefined) store.stormUpdatedAt = Date.now();
   if (minute !== undefined) store.minute = minute;
   if (running !== undefined) store.running = running;
   if (speed !== undefined) store.speed = speed;
 
   const previousStatuses = { ...store.statuses };
-  const updatedStatuses: Record<string, DrainStatus> = { ...store.statuses };
+  const updatedStatuses: Record<string, DrainStatus> = {};
   const drainsMap = new Map(drains.map((d) => [d.id, d]));
 
   for (const r of readings) {
@@ -110,6 +133,8 @@ export async function processReadings(readings: Array<{
     const newStatus = assess(drain, history);
     updatedStatuses[r.drain_id] = newStatus;
     store.statuses[r.drain_id] = newStatus;
+    if (r.source !== "device") store.observedAt[r.drain_id] = Date.now();
+    else delete store.observedAt[r.drain_id]; // Real sensors require a separate observation-expiry contract.
 
     // Trigger Guard Task when a drain transitions to RED (level_cm >= bank_cm)
     const prevStatus = previousStatuses[r.drain_id]?.status ?? "green";
@@ -118,7 +143,8 @@ export async function processReadings(readings: Array<{
     }
   }
 
-  // Push updates to Supabase
+  store.revision++;
+  // Mirror only drains that actually received readings; never renew untouched rows.
   try {
     const sb = getServerSupabase();
     const rows = Object.values(updatedStatuses).map((s) => ({
@@ -131,7 +157,7 @@ export async function processReadings(readings: Array<{
       updated_at: new Date().toISOString(),
     }));
 
-    sb.from("drain_status").upsert(rows).then();
+    if (rows.length) sb.from("drain_status").upsert(rows).then();
   } catch (err) {
     console.error("Supabase sync non-blocking error:", err);
   }
@@ -147,7 +173,7 @@ function openGuardTasksForDrain(drainId: string) {
 
   for (const res of vulnerableResidents) {
     const existing = store.guardTasks.find(
-      (t) => t.resident_id === res.id && t.state !== "done",
+      (t) => t.resident_id === res.id && t.state !== "done" && t.state !== "cancelled",
     );
     if (!existing) {
       const task: GuardTask = {
@@ -190,7 +216,7 @@ function mirror(write: (sb: ReturnType<typeof getServerSupabase>) => PromiseLike
 }
 
 const liveTaskOf = (residentId: string) =>
-  store.guardTasks.find((t) => t.resident_id === residentId && t.state !== "done");
+  store.guardTasks.find((t) => t.resident_id === residentId && t.state !== "done" && t.state !== "cancelled");
 
 /** "safe" or "need_help" (+ what for). A call while a task is live updates the ask; the guard keeps their place. */
 export function recordCheckIn(residentId: string, state: "safe" | "need_help", request: HelpRequest | null = null) {
@@ -236,20 +262,49 @@ export function acceptGuardTask(taskId: string | number, responder: string | nul
   return transitionTask(taskId, "accept", responder);
 }
 
-export function closeGuardTask(taskId: string | number, responder: string | null = null) {
-  return transitionTask(taskId, "resolve", responder);
+export function closeGuardTask(
+  taskId: string | number,
+  responder: string | null = null,
+  outcome: TaskOutcome | null = null,
+  outcome_note: string | null = null,
+) {
+  return transitionTask(taskId, "resolve", responder, outcome, outcome_note);
 }
 
-function transitionTask(taskId: string | number, action: TaskAction, responder: string | null) {
+export function cancelGuardTask(taskId: string | number) {
+  return transitionTask(taskId, "cancel", null);
+}
+
+export function cancelResidentTask(residentId: string) {
+  const live = liveTaskOf(residentId);
+  if (!live) return { ok: false as const, error: "no active task for resident" };
+  return cancelGuardTask(live.id);
+}
+
+function transitionTask(
+  taskId: string | number,
+  action: TaskAction,
+  responder: string | null,
+  outcome: TaskOutcome | null = null,
+  outcome_note: string | null = null,
+) {
   const index = store.guardTasks.findIndex((t) => String(t.id) === String(taskId));
   if (index < 0) return { ok: false as const, error: "unknown task" };
-  const result = applyTaskAction(store.guardTasks[index], action, responder, new Date().toISOString());
+  const result = applyTaskAction(store.guardTasks[index], action, responder, new Date().toISOString(), outcome, outcome_note);
   if (!result.ok) return result;
   const task = result.task;
   store.guardTasks[index] = task;
   // Cloud ids differ from the laptop's; the live task is unique per resident (index guard_tasks_one_open).
   mirror((sb) => sb.from("guard_tasks")
-    .update({ state: task.state, accepted_at: task.accepted_at ?? null, responder_name: task.responder_name ?? null, done_at: task.done_at ?? null })
+    .update({
+      state: task.state,
+      accepted_at: task.accepted_at ?? null,
+      responder_name: task.responder_name ?? null,
+      done_at: task.done_at ?? null,
+      cancelled_at: task.cancelled_at ?? null,
+      outcome: task.outcome ?? null,
+      outcome_note: task.outcome_note ?? null,
+    })
     .eq("resident_id", task.resident_id).in("state", ["open", "on_the_way"]), "guard_tasks update");
   return { ok: true as const, task };
 }
