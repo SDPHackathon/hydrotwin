@@ -1,0 +1,54 @@
+.evacuation-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  color: #687169;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.evacuation-overview { padding: 0 2px 18px; border-bottom: 1px solid var(--workspace-line); }
+.evacuation-overview p { margin-top: 9px; font-size: 11px; }
+.evacuation-heading { display: flex; align-items: center; gap: 9px; color: var(--workspace-ink); font-size: 13px; font-weight: 550; letter-spacing: -.15px; }
+.evacuation-heading-icon { display: grid; place-items: center; flex-shrink: 0; width: 30px; height: 30px; border-radius: 50%; background: #f1f5e6; color: #42634e; }
+.evacuation-overview .evacuation-note { color: #747c73; font-size: 10px; }
+.evacuation-card { padding: 16px; border: 1px solid var(--workspace-line); border-radius: 9px; background: #fff; }
+.evacuation-finder { display: flex; flex-direction: column; gap: 16px; }
+.evacuation-eyebrow { color: #737b73; font-size: 10px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
+.evacuation-actions { display: flex; flex-direction: column; gap: 8px; }
+.evacuation-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 39px; padding: 9px 12px; border: 1px solid transparent; border-radius: 7px; font-size: 11px; font-weight: 500; line-height: 1.5; transition: background 150ms, border-color 150ms; }
+.evacuation-button svg { flex-shrink: 0; }
+.evacuation-panel .evacuation-secondary { background: #fff; border-color: #e0e5dc; color: var(--workspace-ink); }
+.evacuation-panel .evacuation-button[aria-pressed="true"] { background: #edf1e8; border-color: #bdcbb5; color: var(--workspace-ink); }
+.evacuation-panel .evacuation-button[aria-pressed="true"]:hover { background: #e4ebdd; }
+.evacuation-secondary:hover { background: var(--workspace-soft); }
+.evacuation-instruction { padding: 11px 12px; border-radius: 7px; background: var(--workspace-soft); color: #4f5d50; font-size: 11px; }
+.evacuation-pick-message { font-size: 11px; }
+.evacuation-pick-message:empty { display: none; }
+.evacuation-label { display: flex; flex-direction: column; gap: 7px; color: #6c756c; font-size: 11px; }
+.evacuation-field { width: 100%; min-width: 0; min-height: 40px; padding: 9px 10px; border: 1px solid #dfe4dc; border-radius: 7px; background: #fff; color: #344a3e; font-size: 12px; line-height: 1.5; }
+.evacuation-result { display: flex; flex-direction: column; gap: 8px; background: #fafbf8; }
+.evacuation-result h3 { display: flex; align-items: center; gap: 8px; color: var(--workspace-ink); font-size: 12px; font-weight: 550; }
+.evacuation-result h3::before { content: ""; width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; background: #278252; }
+.evacuation-result[data-route-state="unavailable"], .evacuation-result[data-route-state="caution"] { background: #fffcf5; border-color: #eee3c6; }
+.evacuation-result[data-route-state="unavailable"] h3::before, .evacuation-result[data-route-state="caution"] h3::before { background: #b67c15; }
+.evacuation-result p { font-size: 11px; }
+.evacuation-destination { padding-left: 15px; color: #5e6b60; overflow-wrap: anywhere; }
+.evacuation-destination strong { color: var(--workspace-ink); font-weight: 550; white-space: nowrap; }
+.evacuation-warning { padding: 8px 10px; border-radius: 6px; background: #fff5db; color: #94600c; }
+.evacuation-drafts { padding: 16px 2px 0; border-top: 1px solid var(--workspace-line); }
+.evacuation-drafts summary { color: #5d695e; font-size: 11px; font-weight: 500; }
+.evacuation-drafts summary::marker { color: #8a9387; font-size: 10px; }
+.evacuation-drafts > :not(summary) { margin-top: 14px; }
+.evacuation-drafts > p { font-size: 10px; }
+.evacuation-draft-toggle { display: flex; align-items: center; gap: 9px; min-height: 44px; font-size: 11px; }
+.evacuation-draft-toggle input { flex-shrink: 0; }
+.evacuation-draft-list { display: flex; flex-direction: column; gap: 4px; }
+.evacuation-draft-list > li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--workspace-line); font-size: 11px; overflow-wrap: anywhere; }
+.evacuation-link { color: #365b43; font-size: 11px; }
+.evacuation-link:hover { text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  .evacuation-panel .evacuation-button { transition: none; }
+}
