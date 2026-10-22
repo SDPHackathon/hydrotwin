@@ -13,6 +13,7 @@ import { S10Impact, S10_DURATION } from "./scenes/S10Impact";
 import { S11EndCard, S11_DURATION } from "./scenes/S11EndCard";
 import { Soundtrack } from "./components/Soundtrack";
 import { FPS, H, W } from "./tokens";
+import { FILM_V3_FRAMES, FilmV3, SCENES_V3 } from "./v3/Film";
 
 // One composition per scene (fast to preview on its own) + the full film.
 // Scenes follow docs/video-storyboard.md.
@@ -64,6 +65,11 @@ export const Root: React.FC = () => (
       height={H}
     />
     {scenes.map((s) => (
+      <Composition key={s.id} id={s.id} component={s.component} durationInFrames={s.duration} fps={FPS} width={W} height={H} />
+    ))}
+    {/* v3 (23 Oct): the narrated film in the deck's look — docs/video-storyboard.md */}
+    <Composition id="HydroTwinV3" component={FilmV3} durationInFrames={FILM_V3_FRAMES} fps={FPS} width={W} height={H} />
+    {SCENES_V3.map((s) => (
       <Composition key={s.id} id={s.id} component={s.component} durationInFrames={s.duration} fps={FPS} width={W} height={H} />
     ))}
   </>

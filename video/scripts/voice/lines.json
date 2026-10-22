@@ -1,0 +1,12 @@
+[
+  { "id": "v01", "text": "On the fourth of June, 2023, two hours of rain flooded Phase 1 of Bandar Bukit Raja. Jalan Makyong was among the worst hit. Across Malaysia, the 2021 floods cost six point one billion ringgit." },
+  { "id": "v02", "text": "But a map alone can't tell anyone what to do next. Planners need to know how a new development changes the same storm. Residents need to know if their street is safe, and where to go. And guards need to know who needs help, and where." },
+  { "id": "v03", "text": "HydroTwin gives all three the same live picture: one digital twin of the township, shared by the dashboard, residents' phones and the guard desk." },
+  { "id": "v04", "text": "It's built on real map data: 199 streets, with buildings and elevation, from OpenStreetMap. A simulated storm fills ten drain zones, and our risk engine turns every reading into a status for each street: green, amber or red." },
+  { "id": "v05", "text": "Here is the live dashboard during a simulated 126-millimetre-an-hour storm. Drain zone 8 floods first, then the water spreads street by street, and the counts update as it happens." },
+  { "id": "v06", "text": "On her phone, a resident on Jalan Gamelan 1F confirms her street. HydroTwin shows its current condition and a walking route to the nearest dry point. When drain zone 8 overflows, her street floods, and the app withdraws the walking route instead of sending her through water. Every screen also works in Bahasa Melayu." },
+  { "id": "v07", "text": "So she asks for help: what she needs, and for how many people. The guard on duty hears the alarm and sees her request, next to the vulnerable residents the desk has already flagged in that zone. The guard gets a route around the deepest water and taps On my way. She sees that help is coming, and can still cancel if she's safe. When it's done, the guard records the outcome." },
+  { "id": "v08", "text": "Before the next storm, planners use Plan mode. Make the drains at zones 5 and 6 bigger, replay the same storm, and flooded streets drop from 142 to 83. Add retention ponds at zones 8 and 7, and it falls to 57, all tested before anything is built." },
+  { "id": "v09", "text": "HydroTwin is a working prototype, backed by 112 automated tests. Next, we verify shelters and walking access, validate the model with real drain sensors, and pilot it in one phase of Bukit Raja, then every Sime Darby Property township." },
+  { "id": "v10", "text": "HydroTwin. Warn residents today. Plan a township that floods less tomorrow." }
+]

@@ -1,0 +1,85 @@
+{
+ "clicks": [
+  {
+   "label": "Plan Mode",
+   "t": 1.22,
+   "x": 1726,
+   "y": 167
+  },
+  {
+   "label": "bigger_drain D05",
+   "t": 5.19,
+   "x": 1726,
+   "y": 633
+  },
+  {
+   "label": "bigger_drain D06",
+   "t": 8.45,
+   "x": 1726,
+   "y": 541
+  },
+  {
+   "label": "retention_pond D08",
+   "t": 14.18,
+   "x": 1726,
+   "y": 589
+  },
+  {
+   "label": "retention_pond D07",
+   "t": 17.41,
+   "x": 1726,
+   "y": 637
+  },
+  {
+   "label": "4×",
+   "t": 21.74,
+   "x": 1867,
+   "y": 824
+  },
+  {
+   "label": "Play",
+   "t": 22.16,
+   "x": 1645,
+   "y": 824
+  }
+ ],
+ "impact": [
+  {
+   "step": "bigger drains D05 + D06",
+   "t": 10.26,
+   "flooded": [
+    142,
+    83
+   ],
+   "depth": [
+    52.7,
+    52.7
+   ],
+   "text": "BEFORE VS AFTER IMPACT\nInstant Replay (3h Storm)\nFlooded Streets\n142\n83\n-59 streets\nMax Depth\n52.7\n52.7\ncm\nNo change\n1st Flood Time\n90m\n90m\nSame buffer"
+  },
+  {
+   "step": "+ ponds D08 + D07",
+   "t": 19.23,
+   "flooded": [
+    142,
+    57
+   ],
+   "depth": [
+    52.7,
+    12.8
+   ],
+   "text": "BEFORE VS AFTER IMPACT\nInstant Replay (3h Storm)\nFlooded Streets\n142\n57\n-85 streets\nMax Depth\n52.7\n12.8\ncm\n-39.9 cm\n1st Flood Time\n90m\n107m\n+17m buffer"
+  }
+ ],
+ "plan": 1.27,
+ "impactBox": {
+  "x": 1322,
+  "y": 96,
+  "w": 190,
+  "h": 389
+ },
+ "drains": 10.26,
+ "ponds": 19.23,
+ "replay": 22.18,
+ "end": 52.18
+}

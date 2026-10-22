@@ -2,5 +2,9 @@ node_modules/
 out/
 # copied from ../public/data by scripts/copy-data.mjs
 src/data/
-# screen recordings of the app (re-recorded by script, too big for git)
-public/rec/
+# screen recordings of the app (re-recorded by script, too big for git) — the v3 scenes
+# read the small time-mark files, so those are kept
+public/rec/*
+!public/rec/r-*.json
+# voice auditions (the chosen voice's lines in public/voice/ are kept)
+public/voice/audition/
