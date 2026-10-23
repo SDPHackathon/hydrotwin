@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { drawTown } from "../../lib/township";
 import { Backdrop, SANS, Voice, clamp, enter, sceneFrames } from "../kit";
 import { GoldTown } from "../town";
@@ -41,8 +41,13 @@ export const V10End: React.FC = () => {
             </div>
           ))}
         </div>
-        <div style={{ ...enter(f, 62), marginTop: 22, fontSize: TY.small, color: V.sage }}>SDP University Hackathon 2026, Planet track</div>
-        <div style={{ ...enter(f, 66), marginTop: 6, fontSize: TY.small, color: V.gold }}>github.com/SDPHackathon/hydrotwin</div>
+        <div style={{ ...enter(f, 62), marginTop: 26, display: "flex", alignItems: "center", gap: 22 }}>
+          <Img src={staticFile("v3/sdp-logo.png")} style={{ height: 76 }} />
+          <div>
+            <div style={{ fontSize: TY.small, color: V.sage }}>SDP University Hackathon 2026, Planet track</div>
+            <div style={{ marginTop: 6, fontSize: TY.small, color: V.gold }}>github.com/SDPHackathon/hydrotwin</div>
+          </div>
+        </div>
       </div>
       <div style={{ ...enter(f, 72), position: "absolute", left: MARGIN, bottom: 60, width: 1680, fontSize: 20, lineHeight: 1.5, color: V.sage }}>
         Simulated drain zones and street depth; operational use requires field validation. Residents and guards in the demo are fictional.

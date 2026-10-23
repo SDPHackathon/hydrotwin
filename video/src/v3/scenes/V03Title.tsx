@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Easing, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, Easing, Img, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { drawTown } from "../../lib/township";
 import { Backdrop, Out, SANS, Voice, clamp, cue, enter, sceneFrames } from "../kit";
 import { GoldTown } from "../town";
@@ -30,6 +30,8 @@ export const V03Title: React.FC = () => {
         <GoldTown town={town} drawAt={-200} buildings={0.14} />
       </AbsoluteFill>
 
+      {/* the organiser's mark (Sime Darby Property), unaltered */}
+      <Img src={staticFile("v3/sdp-logo.png")} style={{ ...enter(f, 8), position: "absolute", left: MARGIN, top: 90, height: 84 }} />
       <div style={{ position: "absolute", left: MARGIN, top: 360, width: 760 }}>
         <div style={{ ...enter(f, 4), fontFamily: SERIF, fontSize: 150, lineHeight: 1, color: V.cream, letterSpacing: -1 }}>HydroTwin</div>
         <div style={{ ...enter(f, 14), marginTop: 30, fontFamily: SERIF, fontSize: 46, lineHeight: 1.22, color: V.sageLight }}>
