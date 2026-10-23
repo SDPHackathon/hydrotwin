@@ -49,7 +49,7 @@ Local files in `public/images/navigation/`, replaceable without changing the nav
 | Name | Used for | Terms |
 |---|---|---|
 | Supabase (free plan, project `hydrotwin`, Danish's org) | Postgres, Realtime, Auth | [Terms of Service](https://supabase.com/terms) · free plan = non-production, pauses after 7 days idle |
-| Vercel (Hobby plan, project `hydrotwin` on Azim's account) — https://hydrotwin-three.vercel.app | Public demo of the web app, deployed 23 Oct from `main` with the Vercel CLI; no environment variables (Local Sim, no Supabase service key) | [Terms of Service](https://vercel.com/legal/terms) · Hobby = personal, non-commercial use · server state is in memory, so the phone help loop is not reliable there — the live demo runs on the laptop |
+| Vercel (Hobby plan, project `hydrotwin` on Azim's account) — https://hydrotwin-sdp.vercel.app (also hydrotwin-three.vercel.app) | Public demo of the web app, deployed 23 Oct from `main` with the Vercel CLI; no environment variables (Local Sim, no Supabase service key) | [Terms of Service](https://vercel.com/legal/terms) · Hobby = personal, non-commercial use · server state is in memory, so the phone help loop is not reliable there — the live demo runs on the laptop |
 
 ## Agent skills (`.claude/skills/`, added 16 Oct)
 
