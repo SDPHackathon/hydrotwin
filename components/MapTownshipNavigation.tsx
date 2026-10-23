@@ -6,6 +6,18 @@ import "./MapTownshipNavigation.css";
 
 type Township = { slug: string; name: string; custom?: boolean };
 const PREVIEWS = ["/images/navigation/plan.jpg", "/images/navigation/route.jpg", "/images/navigation/live.jpg"];
+// Real photographs of the bundled townships (Wikimedia Commons, credited on the card and in
+// docs/third-party.md). A township without one, e.g. a newly downloaded area, uses the generic previews.
+const PHOTOS: Record<string, { src: string; credit: string }> = {
+  "bukit-raja": { src: "/images/townships/bukit-raja.jpg", credit: "Photo: *angys*, CC BY-SA 4.0, via Wikimedia Commons" },
+  "cyberjaya-selangor": { src: "/images/townships/cyberjaya-selangor.jpg", credit: "Photo: Vimobe, CC BY-SA 4.0, via Wikimedia Commons" },
+  "taman-sri-muda": { src: "/images/townships/taman-sri-muda.jpg", credit: "Photo: *angys*, CC BY-SA 4.0, via Wikimedia Commons" },
+  "universiti-teknikal-malaysia-melaka-jalan-simpang-gading-kesang-pajak": {
+    src: "/images/townships/universiti-teknikal-malaysia-melaka-jalan-simpang-gading-kesang-pajak.jpg",
+    credit: "Photo: Jeluang Terluang, CC BY-SA 4.0, via Wikimedia Commons",
+  },
+};
+const SOURCES = [...Object.values(PHOTOS).map((photo) => photo.src), ...PREVIEWS];
 
 export default function MapTownshipNavigation({ current, townships, onSelect, onDownload }: {
   current: Township;
@@ -21,6 +33,8 @@ export default function MapTownshipNavigation({ current, townships, onSelect, on
   const options = townships.some(item => item.slug === current.slug) ? townships : [current, ...townships];
   const previewIndex = Math.max(0, options.findIndex(item => item.slug === preview));
   const previewTownship = options[previewIndex];
+  const photo = PHOTOS[previewTownship.slug];
+  const activeSrc = photo?.src ?? PREVIEWS[previewIndex % PREVIEWS.length];
 
   useEffect(() => {
     if (!open) return;
@@ -52,8 +66,11 @@ export default function MapTownshipNavigation({ current, townships, onSelect, on
         <button type="button" className="township-menu-download" onClick={() => { close(); onDownload(); }}>+ Download a new township <span aria-hidden="true">↗</span></button>
       </div>
       <div className="map-mode-preview">
-        {PREVIEWS.map((src, index) => <Image key={src} src={src} alt="" fill sizes="(max-width: 600px) 1px, 340px" className="map-mode-image" data-active={previewIndex % PREVIEWS.length === index} />)}
-        <div className="township-menu-caption"><span>Illustrative preview</span><strong>{previewTownship.name}</strong></div>
+        {SOURCES.map((src) => <Image key={src} src={src} alt="" fill sizes="(max-width: 600px) 1px, 340px" className="map-mode-image" data-active={src === activeSrc} />)}
+        <div className="township-menu-caption">
+          {photo ? <><strong>{previewTownship.name.split(",")[0]}</strong><small className="township-menu-credit">{photo.credit}</small></>
+            : <><span>Illustrative preview</span><strong>{previewTownship.name}</strong></>}
+        </div>
       </div>
     </div>
   </div>;

@@ -44,6 +44,17 @@ Local files in `public/images/navigation/`, replaceable without changing the nav
 | `plan.jpg` | [City street · photo-1449824913935-59a10b8d2000](https://images.unsplash.com/photo-1449824913935-59a10b8d2000) | Unsplash License |
 | `route.jpg` | [Desert road · photo-1500530855697-b586d89ba3ee](https://images.unsplash.com/photo-1500530855697-b586d89ba3ee) | Unsplash License |
 
+## Township photographs (switcher previews, 23 October 2026)
+
+Local files in `public/images/townships/`, resized to 1200 px; one real photograph per bundled township, credited on the card itself. CC BY-SA requires attribution and a link to the licence; the images are unaltered apart from resizing (Cyberjaya: centre crop of the panorama).
+
+| File | Photograph | Author | Licence |
+|---|---|---|---|
+| `bukit-raja.jpg` | [Bandar Bukit Raja from Setia Alam (230115)](https://commons.wikimedia.org/wiki/File:Bandar_Bukit_Raja_from_Setia_Alam_(230115).jpg) | \*angys\* | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| `cyberjaya-selangor.jpg` | [Cyberjaya Aerial](https://commons.wikimedia.org/wiki/File:Cyberjaya_Aerial.jpg) | Vimobe | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| `taman-sri-muda.jpg` | [Jalan Mewah 25 66 and Plaza Sri Muda (250318)](https://commons.wikimedia.org/wiki/File:Jalan_Mewah_25_66_and_Plaza_Sri_Muda_(250318).jpg) | \*angys\* | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+| `universiti-teknikal-malaysia-melaka-jalan-simpang-gading-kesang-pajak.jpg` | [Masjid Sayyidina Abu Bakar dari jauh (1)](https://commons.wikimedia.org/wiki/File:Masjid_Sayyidina_Abu_Bakar_dari_jauh_(1).jpg) (UTeM main campus) | Jeluang Terluang | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) |
+
 ## Hosted service terms
 
 | Name | Used for | Terms |
