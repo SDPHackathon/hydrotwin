@@ -332,8 +332,8 @@ function DashboardView({
   }, [mode, simulationScenario, interventions]);
 
   return (
-    <div className="grid h-dvh overflow-hidden grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_390px] lg:grid-rows-[minmax(0,1fr)]">
-      <div className="relative min-h-0 min-w-0">
+    <div className="dashboard-shell grid h-dvh overflow-hidden grid-rows-[minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_390px] lg:grid-rows-[minmax(0,1fr)]">
+      <div className="dashboard-map relative min-h-0 min-w-0">
       <div className="dashboard-mode-surface h-full w-full" data-mode-phase={modePhase}>
       <TownshipMap
         storm={developmentActive ? undefined : displayedStorm}
