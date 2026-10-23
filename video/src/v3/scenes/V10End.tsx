@@ -7,9 +7,16 @@ import { MARGIN, SERIF, TY, V } from "../tokens";
 
 // Scene 10 — end card: name, line, team, repo, the honesty line (deck slide 10), AI and sources.
 const ID = "v10";
-export const V10_DURATION = sceneFrames(ID, 9);
+export const V10_DURATION = sceneFrames(ID, 11); // long enough to read the names
 
-const TEAM = "Danish, Hurin, Amni, Ashwin, Azim"; // full names to come from the team
+// As on the deck's "Meet team pipol" slide (names only; no contact details in a public video).
+const TEAM = [
+  "Danish Syazwan bin Zaihairul, team leader",
+  "Hurin Bisyri binti Nazri",
+  "Muhamad Nurfitri Azim bin Ruzain",
+  "Amni Nur Aqilah binti Rozwardi",
+  "Ashwin a/l Yathipan",
+];
 const town = drawTown({ x: 980, y: 90, w: 860, h: 820 });
 
 export const V10End: React.FC = () => {
@@ -20,16 +27,24 @@ export const V10End: React.FC = () => {
       <AbsoluteFill style={{ opacity: interpolate(f, [0, 30], [0, 0.55], clamp) }}>
         <GoldTown town={town} drawAt={-100} buildings={0.12} />
       </AbsoluteFill>
-      <div style={{ position: "absolute", left: MARGIN, top: 200, width: 900 }}>
-        <div style={{ ...enter(f, 2), fontFamily: SERIF, fontSize: 130, lineHeight: 1, color: V.cream }}>HydroTwin</div>
-        <div style={{ ...enter(f, 12), fontFamily: SERIF, fontSize: 50, lineHeight: 1.22, color: V.sageLight, marginTop: 28 }}>
+      <div style={{ position: "absolute", left: MARGIN, top: 130, width: 900 }}>
+        <div style={{ ...enter(f, 2), fontFamily: SERIF, fontSize: 120, lineHeight: 1, color: V.cream }}>HydroTwin</div>
+        <div style={{ ...enter(f, 12), fontFamily: SERIF, fontSize: 46, lineHeight: 1.22, color: V.sageLight, marginTop: 24 }}>
           Warn residents today. Plan a township that floods less tomorrow.
         </div>
-        <div style={{ ...enter(f, 30), marginTop: 56, fontSize: TY.lead, color: V.cream }}>{TEAM}</div>
-        <div style={{ ...enter(f, 36), marginTop: 10, fontSize: TY.label, color: V.sage }}>SDP University Hackathon 2026, Planet track</div>
-        <div style={{ ...enter(f, 42), marginTop: 10, fontSize: TY.label, color: V.gold }}>github.com/SDPHackathon/hydrotwin</div>
+        <div style={{ ...enter(f, 28), marginTop: 44, fontFamily: SERIF, fontSize: 38, color: V.cream }}>Team pipol</div>
+        <div style={{ ...enter(f, 32), marginTop: 6, fontSize: TY.label, color: V.sage }}>Universiti Teknikal Malaysia Melaka (UTeM)</div>
+        <div style={{ marginTop: 22 }}>
+          {TEAM.map((name, i) => (
+            <div key={name} style={{ ...enter(f, 38 + i * 4, undefined, 14), fontSize: TY.label, lineHeight: 1.55, color: V.cream }}>
+              {name}
+            </div>
+          ))}
+        </div>
+        <div style={{ ...enter(f, 62), marginTop: 22, fontSize: TY.small, color: V.sage }}>SDP University Hackathon 2026, Planet track</div>
+        <div style={{ ...enter(f, 66), marginTop: 6, fontSize: TY.small, color: V.gold }}>github.com/SDPHackathon/hydrotwin</div>
       </div>
-      <div style={{ ...enter(f, 50), position: "absolute", left: MARGIN, bottom: 70, width: 1680, fontSize: 21, lineHeight: 1.5, color: V.sage }}>
+      <div style={{ ...enter(f, 72), position: "absolute", left: MARGIN, bottom: 60, width: 1680, fontSize: 20, lineHeight: 1.5, color: V.sage }}>
         Simulated drain zones and street depth; operational use requires field validation. Residents and guards in the demo are fictional.
         <br />
         Voice-over generated with ElevenLabs, background image with ChatGPT; AI-assisted development is logged in the repository. Map data © OpenStreetMap contributors (ODbL), elevation
